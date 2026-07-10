@@ -1,0 +1,1252 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Cotizador GMM 2026</title>
+<!-- PWA: instalable en Android/iOS/iPadOS -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1A3A5C">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+<!-- iOS/iPadOS: Safari ignora manifest.json, usa estas etiquetas para "Agregar a inicio" -->
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Cotizador GMM">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f4;color:#1a1a1a;padding:1rem}
+.wrap{max-width:980px;margin:0 auto;padding:1.5rem 0 3rem}
+.card{background:#fff;border:.5px solid #d4d4d0;border-radius:12px;padding:16px;margin-bottom:12px}
+.sl{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#888;margin:0 0 10px}
+.chip{cursor:pointer;border:.5px solid #d4d4d0;border-radius:8px;padding:4px 10px;font-size:12px;background:#fff;color:#555;transition:all .15s;white-space:nowrap}
+.chip.on{font-weight:500}
+.rc{border-radius:12px;border:.5px solid #d4d4d0;overflow:hidden;flex:1;min-width:150px}
+.rhd{padding:10px 13px;border-bottom:.5px solid #d4d4d0}
+.rrow{display:flex;justify-content:space-between;align-items:baseline;padding:5px 13px;border-top:.5px solid #d4d4d0;font-size:12px}
+.rrow.tot{font-weight:500;font-size:13px;background:#fafaf9}
+.ded-row{padding:4px 13px 6px;font-size:11px;color:#888;display:flex;gap:4px;flex-wrap:wrap;border-top:.5px solid #f0f0ee;align-items:center}
+.ded-pill{background:#f0f0ee;border-radius:4px;padding:2px 7px;font-size:10px;cursor:pointer;white-space:nowrap;border:none}
+.ded-pill.sel{background:#1A3A5C;color:#fff}
+.tgl{width:36px;height:20px;border-radius:10px;background:#d4d4d0;border:none;cursor:pointer;position:relative;transition:background .2s;flex-shrink:0}
+.tgl.on{background:#0F6E56}
+.tgl::after{content:'';position:absolute;width:14px;height:14px;border-radius:50%;background:white;top:3px;left:3px;transition:left .2s}
+.tgl.on::after{left:19px}
+.or{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-top:.5px solid #d4d4d0}
+.spin{display:inline-block;width:16px;height:16px;border:2px solid #d4d4d0;border-top-color:#888;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.warn{background:#fffbeb;color:#92400e;border-radius:6px;padding:4px 8px;font-size:10px;margin-top:5px;border:.5px solid #fcd34d}
+input,select{border:.5px solid #d4d4d0;border-radius:8px;padding:7px 10px;font-size:13px;width:100%;background:#fff;color:#1a1a1a}
+.gen-btn{font-size:11px;padding:3px 9px;border-radius:6px;border:.5px solid #d4d4d0;background:#fff;cursor:pointer;color:#888;transition:all .15s;white-space:nowrap}
+.gen-btn.on{background:#1A3A5C;color:#fff;border-color:#1A3A5C;font-weight:500}
+input:focus,select:focus{outline:none;border-color:#888}
+.age-input{width:56px;font-size:12px;padding:4px 6px;text-align:center}
+.hijo-row{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.hijo-lbl{font-size:12px;color:#555;white-space:nowrap;min-width:48px}
+/* Comparativo */
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tab{padding:5px 12px;border-radius:8px;font-size:12px;cursor:pointer;border:.5px solid #d4d4d0;background:#fff;color:#555}
+.tab.on{background:#1A3A5C;color:#fff;border-color:#1A3A5C;font-weight:500}
+.cmp-table{width:100%;border-collapse:collapse;font-size:11px}
+.cmp-table th{background:#1A3A5C;color:#fff;padding:6px 8px;text-align:center;font-weight:500;font-size:10px;border:.5px solid #fff}
+.cmp-table th.cob{text-align:left;min-width:140px}
+.cmp-table td{padding:5px 8px;border:.5px solid #e5e5e3;text-align:center;vertical-align:middle}
+.cmp-table td.cob{text-align:left;color:#444;background:#fafaf9}
+.cmp-table tr:nth-child(even) td{background:#f9f9f8}
+.cmp-table tr:nth-child(even) td.cob{background:#f3f3f2}
+.val-inc{color:#0F6E56;font-weight:500}
+.val-exc{color:#991b1b}
+.val-lim{color:#854F0B}
+.val-emp{color:#bbb;font-size:10px}
+/* Nivel badge */
+.nivel-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:500;margin-bottom:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:8px">
+  <div>
+    <p style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#888;margin:0 0 2px">Cotizador GMM · 2026 · v28</p>
+    <p style="font-size:20px;font-weight:500;margin:0" id="title-plans">Cargando planes...</p>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px">
+    <div style="text-align:right">
+      <p style="font-size:11px;color:#888;margin:0 0 1px">Tipo de cambio FIX Banxico</p>
+      <p id="fx-display" style="font-size:14px;font-weight:500;margin:0">Cargando...</p>
+    </div>
+    <button onclick="resetForm()" style="display:flex;align-items:center;gap:5px;padding:7px 14px;border-radius:8px;border:.5px solid #d4d4d0;background:#fff;cursor:pointer;font-size:12px;color:#991b1b;white-space:nowrap;font-weight:500">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 .49-3.51"></path></svg>
+      Limpiar datos
+    </button>
+    <button id="btn-print" onclick="openPrint()" style="display:flex;visibility:hidden;align-items:center;gap:5px;padding:7px 14px;border-radius:8px;border:.5px solid #1A3A5C;background:#1A3A5C;cursor:pointer;font-size:12px;color:#fff;white-space:nowrap;font-weight:500">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+      Imprimir cotización
+    </button>
+  </div>
+</div>
+
+<div id="loading-state" class="card" style="text-align:center;padding:2rem">
+  <div class="spin" style="margin:0 auto 10px"></div>
+  <p style="font-size:13px;color:#888">Conectando con Google Sheets...</p>
+</div>
+
+<div id="main-ui" style="display:none">
+
+<!-- INTEGRANTES -->
+<div class="card">
+  <p class="sl">Integrantes</p>
+  <div style="margin-bottom:14px">
+    <p style="font-size:12px;color:#555;margin:0 0 5px">Nombre del cliente</p>
+    <input type="text" id="nombre-cliente" placeholder="Ej. Juan García" oninput="calcular()" style="max-width:400px">
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+    <div>
+      <p style="font-size:12px;color:#555;margin:0 0 5px">Edad del titular</p>
+      <input type="number" id="at" min="18" max="90" placeholder="Ej. 42" oninput="calcular()">
+      <div style="display:flex;gap:5px;margin-top:5px">
+        <button class="gen-btn on" id="gen-t-M" onclick="setGen('t','M')">♂ Masc.</button>
+        <button class="gen-btn" id="gen-t-F" onclick="setGen('t','F')">♀ Fem.</button>
+      </div>
+    </div>
+    <div>
+      <p style="font-size:12px;color:#555;margin:0 0 5px">Edad del cónyuge <span style="color:#aaa">(opcional)</span></p>
+      <input type="number" id="ac" min="18" max="90" placeholder="Ej. 40" oninput="calcular()">
+      <div style="display:flex;gap:5px;margin-top:5px">
+        <button class="gen-btn on" id="gen-c-M" onclick="setGen('c','M')">♂ Masc.</button>
+        <button class="gen-btn" id="gen-c-F" onclick="setGen('c','F')">♀ Fem.</button>
+      </div>
+    </div>
+  </div>
+  <p style="font-size:12px;color:#555;margin:0 0 8px">Hijos — captura la edad de cada uno para cotizar exacto en <strong>Redbridge</strong> y <strong>Best Doctors</strong></p>
+  <div id="hijos-list"></div>
+  <button onclick="addHijo()" style="font-size:12px;padding:4px 12px;border-radius:8px;border:.5px solid #d4d4d0;background:#fff;cursor:pointer;color:#0F6E56;margin-top:4px">+ Agregar hijo</button>
+</div>
+
+<!-- CONFIGURACIÓN -->
+<div class="card">
+  <p class="sl">Configuración</p>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+    <div>
+      <p style="font-size:12px;color:#555;margin:0 0 5px">Nivel de cobertura</p>
+      <select id="nivel" onchange="setNivel(this.value)">
+        <option value="" selected>— Selecciona un nivel —</option>
+        <option value="entrada">Entrada</option>
+        <option value="medio">Medio</option>
+        <option value="alto">Alto</option>
+        <option value="premium">Premium / Maternidad</option>
+        <option value="nacional">Nacional (CDMX / ZM)</option>
+      </select>
+      <p style="font-size:11px;color:#aaa;margin-top:4px" id="nivel-hint"></p>
+    </div>
+    <div>
+      <p style="font-size:12px;color:#555;margin:0 0 5px">Deducible preferido</p>
+      <select id="dref" onchange="onDrefChange()">
+        <option value="" selected>— Elige una opción —</option>
+        <option value="500">USD $500</option>
+        <option value="1000">USD $1,000</option>
+        <option value="2000">USD $2,000</option>
+        <option value="2500">USD $2,500</option>
+        <option value="3000">USD $3,000</option>
+        <option value="3500">USD $3,500</option>
+        <option value="5000">USD $5,000</option>
+        <option value="10000">USD $10,000</option>
+        <option value="20000">USD $20,000</option>
+        <option value="50000">USD $50,000</option>
+      </select>
+      <p style="font-size:11px;color:#aaa;margin-top:4px">Se usa el más cercano disponible si el exacto no existe</p>
+    </div>
+  </div>
+
+  <p class="sl" style="margin-bottom:6px">Planes activos <span style="font-size:10px;font-weight:400;color:#aaa;text-transform:none;letter-spacing:0">— ajusta manualmente si lo necesitas</span></p>
+  <div id="chips-area" style="display:flex;gap:5px;flex-wrap:wrap"></div>
+</div>
+
+<!-- DESCUENTOS -->
+<div class="card">
+  <p class="sl">Descuentos</p>
+  <div class="or" style="border-top:none;padding-top:0">
+    <div><p style="font-size:13px;font-weight:500;margin:0">Nuevo negocio BUPA <span style="font-size:11px;font-weight:400;color:#888">10% sobre prima base</span></p></div>
+    <button class="tgl" id="tbupa_nn" onclick="toggleOpt('bupa_nn')"></button>
+  </div>
+  <div class="or">
+    <div><p style="font-size:13px;font-weight:500;margin:0">Descuento edad BUPA <span style="font-size:11px;font-weight:400;color:#888">5% · titular y cónyuge 5–50 años</span></p></div>
+    <button class="tgl" id="tbupa_edad" onclick="toggleOpt('bupa_edad')"></button>
+  </div>
+  <div class="or">
+    <div><p style="font-size:13px;font-weight:500;margin:0">Nuevo negocio SUREGO <span style="font-size:11px;font-weight:400;color:#888">10% sobre prima base</span></p></div>
+    <button class="tgl" id="tsg_nn" onclick="toggleOpt('sg_nn')"></button>
+  </div>
+  <div class="or">
+    <div><p style="font-size:13px;font-weight:500;margin:0">SUREGO: Descuento familiar <span style="font-size:11px;font-weight:400;color:#888">5% sobre prima neta</span></p></div>
+    <button class="tgl" id="tsg_fam" onclick="toggleOpt('sg_fam')"></button>
+  </div>
+  <div class="or">
+    <div>
+      <p style="font-size:13px;font-weight:500;margin:0">Endoso de Accidentes Redbridge <span style="font-size:11px;font-weight:400;color:#888">prima adicional por asegurado según edad y deducible</span></p>
+      <p style="font-size:11px;color:#aaa;margin:2px 0 0">Aplica a Red Ultra, Prime, Max, Special y Choice</p>
+    </div>
+    <button class="tgl on" id="trb_acc" onclick="toggleOpt('rb_acc')"></button>
+  </div>
+</div>
+
+<div id="rarea"></div>
+
+<!-- Comparativo -->
+<div id="cmp-section" style="display:none">
+  <div style="margin:20px 0 10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+    <div>
+      <p style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#888;margin:0 0 2px">Comparativo de coberturas</p>
+      <p style="font-size:16px;font-weight:500;margin:0">Planes seleccionados</p>
+    </div>
+    <div class="tabs" id="sec-tabs"></div>
+  </div>
+  <p style="font-size:11px;color:#aaa;margin:0 0 8px">Para comparar un plan en varios deducibles, selecciona más de uno con clic en su tarjeta de cotización arriba.</p>
+  <div class="card" id="cmp-content" style="padding:0;overflow-x:auto"></div>
+</div>
+
+</div>
+</div>
+
+<script>
+const APPS_URL='https://script.google.com/macros/s/AKfycbzLveYAxzBJJhY6InX4cqbJ3FyFxcC58UmiV9byRckqeY_53w1WL7DHySK8_Zxk8-3QjA/exec';
+const HIJO_INDIVIDUAL=['RB-ULTRA','RB-PRIME','RB-MAX','RB-SPEC','RB-CH1','RB-CH2','RB-CH3','RB-CH4','BD-ELITE','BD-PREM','BD-GLOBAL','BD-SEL'];
+// PanAmerican: hybrid — children <24 by group, >=24 by individual age
+const PA_PLANES=['PA-MUNDIAL','PA-PREF','PA-WACCESS','PA-ACCESS','PA-PACCESS'];
+// BUPA Nacional: tarifa individual por edad Y género
+const NAC_PLANES=['BUPA-NAC-20M','BUPA-NAC-50M'];
+// PA-MUNDIAL and PA-PREF: deducibles en MXN a razón de 20 pesos por dólar
+// PA-WACCESS y PA-ACCESS: deducibles en USD (1K-20K) → no necesitan mapeo
+const PA_MXN_DED_PLANES=['PA-MUNDIAL','PA-PREF'];
+// PA-MUNDIAL/PA-PREF: equivalencia deducible USD → MXN (TC fijo 20:1)
+const PA_USD_TO_MXN={1000:20000,2000:40000,5000:100000,10000:200000,20000:400000};
+// BUPA Nacional: los deducibles se cotizan directo en MXN desde el sheet
+// (ya no hay tabla fija USD→MXN — ver getUsedDed(), usa el TC vigente para
+// convertir el "deducible preferido" del selector, en USD, a un objetivo en
+// MXN y así encontrar el escalón real más cercano. La tabla fija anterior
+// quedó obsoleta cuando se cargaron las tarifas nuevas BUPA Nacional Plus V9,
+// que usan una escalera de deducibles distinta: $9,500 a $210,500 MXN).
+const MAT_MAX_DED={'BUPA-ELITE':2000,'SUREGO-PROT':2000,'RB-ULTRA':5000,'BMI-MER':2500,'BMI-MER-PLUS':2500,'BD-ELITE':3000,'VUMI-ABS':2000};
+
+// ── Meridian Plus: endoso fijo por edad y rol (USD) ───────────────────────────
+// Aplica SOLO en deducibles 500, 1000 y 2500 USD. Hijos sin endoso.
+// Edades 18-19 usan tarifa de 20. Edad máxima 68 (fuera de rango → no disponible).
+const MER_PLUS_ENDORSED_DEDS=[500,1000,2500];
+const MER_PLUS_END={
+  // [edad]: [titular, conyuge]
+  20:[1472,1104],21:[1472,1104],22:[1472,1104],23:[1472,1104],24:[1472,1104],
+  25:[1472,1104],26:[1472,1104],27:[1472,1104],28:[1472,1104],29:[1472,1104],
+  30:[1472,1104],31:[1472,1104],32:[1472,1104],33:[1472,1104],34:[1472,1104],
+  35:[1472,1104],36:[1472,1104],37:[1472,1104],38:[1472,1104],39:[1472,1104],
+  40:[1472,1104],41:[1472,1104],42:[1472,1104],43:[1472,1104],44:[1472,1104],
+  45:[2941,2206],46:[2941,2206],47:[2941,2206],48:[2941,2206],49:[2941,2206],
+  50:[2941,2206],51:[3075,2306],52:[3075,2306],53:[3075,2306],54:[3075,2306],
+  55:[3075,2306],56:[3075,2306],57:[3075,2306],58:[3075,2306],59:[3075,2306],
+  60:[5125,3844],61:[5125,3844],62:[5125,3844],63:[5125,3844],64:[5125,3844],
+  65:[5125,3844],66:[5495,4121],67:[5495,4121],68:[5495,4121]
+};
+function getMerPlusEndoso(age,isConyuge){
+  // Edades 18-19 usan tarifa de 20
+  const a=age<20?20:age;
+  if(a<20||a>68)return null; // fuera de rango → plan no disponible para este asegurado
+  const row=MER_PLUS_END[a];
+  if(!row)return null;
+  return isConyuge?row[1]:row[0];
+}
+
+// Endoso de Accidentes Redbridge
+const RB_ACC_PLANES=['RB-ULTRA','RB-PRIME','RB-MAX','RB-SPEC','RB-CH1','RB-CH2','RB-CH3','RB-CH4'];
+const RB_ACC_T={500:[30,36,52,90],1000:[30,36,52,90],2000:[30,36,52,90],5000:[62,74,107,185],10000:[90,108,156,270],20000:[121,145,209,361],25000:[130,156,225,389]};
+function rbAccBand(a){return a<=17?0:a<=39?1:a<=59?2:3;}
+function rbAccEndoso(plan,tA,cA,hijosArr,usedDed){
+  if(!RB_ACC_PLANES.includes(plan.clave))return 0;
+  const t=RB_ACC_T[usedDed];if(!t)return 0;
+  let tot=t[rbAccBand(tA)];
+  if(!isNaN(cA)&&cA>=18)tot+=t[rbAccBand(cA)];
+  hijosArr.forEach(h=>{const a=(h&&typeof h==='object')?h.age:h;if(!isNaN(a)&&a>=0)tot+=t[rbAccBand(a)];});
+  return tot;
+}
+
+const NIVELES={
+  entrada:{
+    label:'Entrada',color:'#854F0B',bg:'#FAEEDA',
+    hint:'RB Special · SUREGO Choice · BMI Ideal $3M · BMI Ideal $1M',
+    planes:['RB-SPEC','SUREGO-CHO','BMI-I3M','BMI-I1M']
+  },
+  medio:{
+    label:'Medio',color:'#185FA5',bg:'#E6F1FB',
+    hint:'RB Max · BUPA Select · BMI Azure · SUREGO Assure · BD Global · BD Select · PA Preferencial',
+    planes:['RB-MAX','BUPA-SEL','BMI-AZU','SUREGO-ASS','BD-GLOBAL','BD-SEL','VUMI-SPEC','PA-PREF','PA-ACCESS','PA-PACCESS']
+  },
+  alto:{
+    label:'Alto',color:'#0F6E56',bg:'#E1F5EE',
+    hint:'RB Prime · BUPA Premier · BMI Meridian II · SUREGO Assure · VUMI Universal · BD Premier · PA Mundial · PA World Access',
+    planes:['RB-PRIME','BUPA-PREM','BMI-MER','SUREGO-ASS','VUMI-UNI','BD-PREM','PA-MUNDIAL','PA-WACCESS']
+  },
+  premium:{
+    label:'Premium / Maternidad',color:'#534AB7',bg:'#EEEDFE',
+    hint:'RB Ultra · BUPA Elite · BMI Meridian Plus · BD Medical Elite · SUREGO Protection · VUMI Absolute',
+    planes:['RB-ULTRA','BUPA-ELITE','BMI-MER-PLUS','BD-ELITE','SUREGO-PROT','VUMI-ABS']
+  },
+  nacional:{
+    label:'Nacional',color:'#0050A0',bg:'#E0EBF8',
+    hint:'BUPA Nacional Plus $20M · BUPA Nacional Plus $50M · BMI Ideal $1M (Sin EE.UU.) · BMI Ideal $3M (Sin EE.UU.) · BMI Azure (Sin EE.UU.) · Cobertura sin Estados Unidos',
+    planes:['BUPA-NAC-20M','BUPA-NAC-50M','BMI-I1M-M','BMI-I3M-M','BMI-AZU-M']
+  }
+};
+
+const CLR={
+  'RB-ULTRA':{cl:'#0F6E56',bg:'#E1F5EE',tc:'#085041'},
+  'RB-PRIME':{cl:'#185FA5',bg:'#E6F1FB',tc:'#0C447C'},
+  'RB-MAX':{cl:'#185FA5',bg:'#E6F1FB',tc:'#0C447C'},
+  'RB-SPEC':{cl:'#854F0B',bg:'#FAEEDA',tc:'#633806'},
+  'BMI-MER':{cl:'#185FA5',bg:'#E6F1FB',tc:'#0C447C'},
+  'BMI-MER-PLUS':{cl:'#534AB7',bg:'#EEEDFE',tc:'#3C3489'},
+  'BMI-AZU':{cl:'#1D9E75',bg:'#E1F5EE',tc:'#085041'},
+  'BMI-I3M':{cl:'#854F0B',bg:'#FAEEDA',tc:'#633806'},
+  'BMI-I1M':{cl:'#854F0B',bg:'#FAEEDA',tc:'#633806'},
+  'BMI-AZU-M':{cl:'#1D9E75',bg:'#E1F5EE',tc:'#085041'},
+  'BMI-I3M-M':{cl:'#854F0B',bg:'#FAEEDA',tc:'#633806'},
+  'BMI-I1M-M':{cl:'#854F0B',bg:'#FAEEDA',tc:'#633806'},
+  'BD-ELITE':{cl:'#534AB7',bg:'#EEEDFE',tc:'#3C3489'},
+  'BD-PREM':{cl:'#0F6E56',bg:'#E1F5EE',tc:'#085041'},
+  'BD-GLOBAL':{cl:'#185FA5',bg:'#E6F1FB',tc:'#0C447C'},
+  'BD-SEL':{cl:'#993556',bg:'#FBEAF0',tc:'#72243E'},
+  'SUREGO-PROT':{cl:'#1A237E',bg:'#E8EAF6',tc:'#0D1257'},
+  'SUREGO-ASS':{cl:'#1565C0',bg:'#E3F2FD',tc:'#0D47A1'},
+  'SUREGO-CHO':{cl:'#00838F',bg:'#E0F7FA',tc:'#00575E'},
+  'BUPA-ELITE':{cl:'#003087',bg:'#E8EEF7',tc:'#001F5B'},
+  'BUPA-PREM':{cl:'#003087',bg:'#E8EEF7',tc:'#001F5B'},
+  'BUPA-SEL':{cl:'#003087',bg:'#E8EEF7',tc:'#001F5B'},
+  'VUMI-ABS':{cl:'#A32D2D',bg:'#FCEBEB',tc:'#791F1F'},
+  'VUMI-UNI':{cl:'#185FA5',bg:'#E6F1FB',tc:'#0C447C'},
+  'VUMI-SPEC':{cl:'#854F0B',bg:'#FAEEDA',tc:'#633806'},
+  'EVER-EVE':{cl:'#444441',bg:'#F1EFE8',tc:'#2C2C2A'},
+  'EVER-EWH':{cl:'#444441',bg:'#F1EFE8',tc:'#2C2C2A'},
+  'PA-MUNDIAL':{cl:'#7B3FA0',bg:'#F3E8FB',tc:'#5A1F80'},
+  'PA-PREF':  {cl:'#7B3FA0',bg:'#F3E8FB',tc:'#5A1F80'},
+  'PA-WACCESS':{cl:'#5A1F80',bg:'#EDE0F7',tc:'#3D0D60'},
+  'PA-ACCESS':{cl:'#5A1F80',bg:'#EDE0F7',tc:'#3D0D60'},'PA-PACCESS':{cl:'#5A1F80',bg:'#EDE0F7',tc:'#3D0D60'},
+  'BUPA-NAC-20M':{cl:'#0050A0',bg:'#E0EBF8',tc:'#003070'},
+  'BUPA-NAC-50M':{cl:'#0050A0',bg:'#E0EBF8',tc:'#003070'},
+};
+
+let plans={}, coverages=null, active={}, fx=null;
+let opts={bupa_nn:false,bupa_edad:false,sg_nn:false,sg_fam:false,rb_acc:true};
+let activeNivel='';
+let planDedOverride={};
+let activeSec=null;
+let hijos=[]; // each: {age, gen:'M'|'F'}
+let genTitular='M', genConyuge='M';
+// ── Matriz plan × deducible (comparativo) ──────────────────────────────────
+// planDedsSel: por cada plan clave, lista de deducibles seleccionados (multi-
+// select vía clic en los pills de su propia tarjeta de cotización). Por defecto
+// cada plan activo arranca con un solo deducible (el más cercano al "Deducible
+// preferido"); crece solo cuando el usuario agrega más pills en su tarjeta.
+let planDedsSel={};
+// Al cambiar el "Deducible preferido" global, reinicia la selección por
+// tarjeta: cada plan activo vuelve a arrancar con un solo pill (el más
+// cercano al nuevo valor preferido), en vez de arrastrar comparaciones viejas.
+function onDrefChange(){
+  planDedsSel={};
+  calcular();
+}
+// Genera una entrada por cada combinación plan×deducible seleccionada para ese
+// plan. No usa planDedOverride: se apoya en que cotizarPlan ya resuelve, vía
+// getUsedDed, el deducible disponible más cercano para cada tipo de plan
+// (incluida la conversión USD→MXN de BUPA Nacional / PA-MUNDIAL / PA-PREF).
+// Deduplica combinaciones que caigan en el mismo deducible real del plan.
+function buildCombos(activeKeys){
+  const tA=parseInt(document.getElementById('at').value);
+  const cA=parseInt(document.getElementById('ac').value);
+  const dedRef=parseInt(document.getElementById('dref').value);
+  const hijosValidos=hijos.filter(h=>!isNaN(h.age)&&h.age>=0);
+  const combos=[];
+  activeKeys.forEach(k=>{
+    const p=plans[k];if(!p)return;
+    const c=CLR[k]||{cl:'#666',bg:'#f5f5f5',tc:'#333'};
+    if(!planDedsSel[k]||!planDedsSel[k].length)planDedsSel[k]=[getUsedDed(p,dedRef)];
+    const seen=new Set();
+    planDedsSel[k].forEach(dv=>{
+      const r=cotizarPlan(p,tA,isNaN(cA)?NaN:cA,hijosValidos,dv,genTitular,genConyuge);
+      const dedKey=(r&&r.dedUsed!=null)?r.dedUsed:('x'+dv);
+      if(seen.has(dedKey))return;
+      seen.add(dedKey);
+      combos.push({k,ded:dv,dedUsed:r?r.dedUsed:null,ck:k+'__'+dedKey,p,c,r});
+    });
+  });
+  return combos;
+}
+// ── Detección de "mejor" valor por renglón de cobertura (híbrido) ──────────
+// Automático para valores claramente numéricos (montos, %, ilimitado).
+// Manual: si alguna celda del renglón empieza con "★" en el Sheet, esa celda
+// gana sin importar el cálculo automático (permite al asesor forzar el criterio
+// en renglones cualitativos como red hospitalaria o trámite).
+function parseCovMagnitude(raw){
+  if(raw==null)return null;
+  let s=String(raw).trim();
+  if(s==='')return null;
+  s=s.replace(/^★\s*/,'');
+  const lv=s.toLowerCase();
+  if(lv==='ilimitado'||lv==='ilimitada'||lv.includes('sin límite')||lv.includes('sin limite'))return Infinity;
+  if(lv==='sin cobertura'||lv==='no aplica'||lv==='no incluido'||lv==='no incluida'||lv==='excluido'||lv==='excluida'||s==='0'||s==='0%')return 0;
+  // % se evalúa ANTES del atajo booleano de "incluido" — 100% y 90% deben ser
+  // comparables entre sí (90 < 100), no colapsar "100%" a 1 como si fuera booleano.
+  let m=s.match(/^(\d+(?:[.,]\d+)?)\s*%$/);
+  if(m)return parseFloat(m[1].replace(',','.'));
+  if(s==='1'||lv==='incluido'||lv==='incluida')return 1;
+  if(/^[A-Z]{0,4}\$?\s*[\d,]+(\.\d+)?\s*[KkM]?$/.test(s)){
+    let n=s.replace(/^[A-Z]{0,4}\$?\s*/,'');
+    let mult=1;
+    if(/[Kk]$/.test(n)){mult=1000;n=n.slice(0,-1);}
+    else if(/M$/.test(n)){mult=1000000;n=n.slice(0,-1);}
+    const num=parseFloat(n.replace(/,/g,''));
+    return isNaN(num)?null:num*mult;
+  }
+  return null; // no confiable → se deja para etiquetado manual (★)
+}
+// Resaltado automático DESACTIVADO (2026-07-10): marcaba "mejor" incorrectamente
+// en varios renglones (lógica de mayor/menor mal aplicada o comparando cosas no
+// comparables). Por ahora solo queda el criterio manual y explícito: anteponer
+// "★" al valor en el Google Sheet de COBERTURAS. parseCovMagnitude() se deja
+// definida por si se retoma el automático más adelante, ya redefinido.
+function bestValueIndices(label,values){
+  const manualIdx=[];
+  values.forEach((v,i)=>{if(v!=null&&String(v).trim().startsWith('★'))manualIdx.push(i);});
+  return manualIdx;
+}
+
+function setGen(who,g){
+  if(who==='t'){genTitular=g;}else{genConyuge=g;}
+  ['M','F'].forEach(x=>{
+    const btn=document.getElementById('gen-'+who+'-'+x);
+    if(btn)btn.classList.toggle('on',x===g);
+  });
+  calcular();
+}
+function setHijoGen(i,g){
+  hijos[i].gen=g;
+  renderHijos();
+  calcular();
+}
+
+// ── Nivel ─────────────────────────────────────────────────────────────────────
+function setNivel(id){
+  activeNivel=id;planDedOverride={};planDedsSel={};
+  const niv=NIVELES[id];
+  const sel=document.getElementById('nivel');
+  if(niv){
+    Object.keys(plans).forEach(k=>{active[k]=niv.planes.includes(k);});
+    document.getElementById('nivel-hint').textContent=niv.hint;
+    sel.style.borderColor=niv.color;sel.style.color=niv.color;sel.style.fontWeight='500';
+  }else{
+    Object.keys(plans).forEach(k=>{active[k]=false;});
+    document.getElementById('nivel-hint').textContent='';
+    sel.style.borderColor='';sel.style.color='';sel.style.fontWeight='';
+  }
+  buildChips();calcular();
+}
+function addHijo(){if(hijos.length>=6)return;hijos.push({age:NaN,gen:'M'});renderHijos();calcular();}
+function removeHijo(i){hijos.splice(i,1);renderHijos();calcular();}
+function setHijoAge(i,v){hijos[i].age=v===''?NaN:parseInt(v);calcular();}
+function renderHijos(){
+  const list=document.getElementById('hijos-list');
+  if(!hijos.length){list.innerHTML='<p style="font-size:12px;color:#aaa;margin-bottom:8px">Sin hijos registrados</p>';return;}
+  list.innerHTML=hijos.map((h,i)=>`
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+      <span class="hijo-lbl">Hijo ${i+1}</span>
+      <input class="age-input" type="number" min="0" max="84" placeholder="Edad"
+        value="${isNaN(h.age)?'':h.age}" oninput="setHijoAge(${i},this.value)">
+      <span style="font-size:11px;color:#aaa">años</span>
+      <button class="gen-btn${h.gen==='M'?' on':''}" id="gen-h${i}-M" onclick="setHijoGen(${i},'M')" style="font-size:10px;padding:2px 7px">♂</button>
+      <button class="gen-btn${h.gen==='F'?' on':''}" id="gen-h${i}-F" onclick="setHijoGen(${i},'F')" style="font-size:10px;padding:2px 7px">♀</button>
+      <button onclick="removeHijo(${i})" style="font-size:11px;padding:2px 8px;border-radius:6px;border:.5px solid #d4d4d0;background:#fff;cursor:pointer;color:#991b1b">✕</button>
+    </div>`).join('');;
+}
+
+// ── Parse tariff sheet ────────────────────────────────────────────────────────
+function parseSheet(rows){
+  if(!rows||rows.length<11)return null;
+  const meta={};
+  for(let i=0;i<8;i++){if(rows[i]&&rows[i][0])meta[String(rows[i][0]).trim()]=rows[i][1]??null;}
+  if(!meta['CLAVE'])return null;
+  // ── parseDeductibleLabel: returns {value, isCombined} ──────────────────────
+  // Combined deductibles (1K/10K, 2.5K/20K) get their FIRST value but are
+  // flagged as isCombined=true so they are never auto-matched — only via pill.
+  // RB-ULTRA combined (500/1K, 1K/2K etc.) are NOT flagged — they represent
+  // a single deductible tier where the slash separates individual/family.
+  const RB_COMBINED_PLANS=['RB-ULTRA','RB-PRIME','RB-MAX','RB-SPEC','RB-CH1','RB-CH2','RB-CH3','RB-CH4'];
+  function parseDeductibleLabel(raw, planClave){
+    if(raw==null)return{value:null,isCombined:false};
+    let s=String(raw).trim();
+    // Strip roman/letter prefix: "I (500/1K)" → "500/1K"
+    const pm=s.match(/^[IVXLCMA-Z]+\s*\(([^)]+)\)$/i);
+    if(pm)s=pm[1].trim();
+    // Combined slash format
+    if(s.includes('/')){
+      const parts=s.split('/');
+      const first=parseKSuffix(parts[0].trim());
+      const second=parseKSuffix(parts[1].trim());
+      // RB plans: slash = individual/family tier → NOT combined, just use first
+      const isRB=planClave&&RB_COMBINED_PLANS.includes(planClave);
+      if(isRB)return{value:first,isCombined:false};
+      // BMI etc: slash = two separate deductible amounts → IS combined
+      return{value:first,isCombined:true,secondValue:second};
+    }
+    return{value:parseKSuffix(s),isCombined:false};
+  }
+  function parseKSuffix(s){
+    if(!s)return null;
+    s=String(s).trim();
+    // Strip currency prefix: $9,000 → 9,000 | MX$20,000 → 20,000
+    s=s.replace(/^[A-Z]*\$\s*/,'');
+    // K suffix: 1K, 3.5K
+    if(/^\d+(\.\d+)?[Kk]$/.test(s))return Math.round(parseFloat(s)*1000);
+    // Plain number with optional commas: 9,000 → 9000
+    const n=parseFloat(s.replace(/,/g,''));
+    return isNaN(n)?null:Math.round(n);
+  }
+  // Fallback: if CLAVE cell is empty, the sheet might be new/misconfigured
+  // We'll still try to parse using the clave from meta
+  const clave_meta=String(meta['CLAVE']||rows[0]?.[1]||'').trim();
+  const dedRow=rows[9],deds=[];
+  for(let c=1;c<dedRow.length;c++){
+    const v=dedRow[c];if(v===null||v===''||v===undefined)break;
+    const label=String(v).trim();
+    if(!label)break;
+    const parsed=parseDeductibleLabel(label,clave_meta);
+    deds.push({label,value:parsed.value,isCombined:parsed.isCombined,secondValue:parsed.secondValue||null,col:c});
+  }
+  if(!deds.length)return null;
+  const ageData={},children={};
+  let lastAgeNum=null;
+  for(let r=10;r<rows.length;r++){
+    const row=rows[r];
+    if(!row)continue;
+    const lbl=row[0]!==null&&row[0]!==''&&row[0]!==undefined?String(row[0]).trim():'';
+    // Skip section headers like "HIJOS POR GRUPO"
+    if(lbl.toLowerCase().includes('hijo')&&lbl.toLowerCase().includes('grupo'))continue;
+    // Children rows: "1 Hijo", "2 Hijos", "3+ Hijos"
+    if(lbl.match(/^[123]/)&&(lbl.toLowerCase().includes('hijo')||lbl.toLowerCase().includes('menor'))){
+      const g=lbl.startsWith('3')?3:parseInt(lbl[0]);children[g]={};
+      deds.forEach(d=>{const v=row[d.col];if(v!=null&&v!==''&&!isNaN(Number(v)))children[g][d.value]=Math.round(Number(v));});
+      continue;
+    }
+    // Gender is in col 1 (row[1]) — applies to NAC plans with two rows per age
+    const genCell=row[1]!==null&&row[1]!==undefined?String(row[1]).trim():'';
+    const hasGender=genCell==='♂ Masc.'||genCell==='♀ Fem.';
+    // Age: use col 0 if present, otherwise carry forward from previous row (female row)
+    let ageNum;
+    if(lbl!==''){
+      ageNum=lbl.includes('más')||lbl.includes('mas')?84:parseInt(lbl);
+      if(!isNaN(ageNum)&&ageNum>=0&&ageNum<=90)lastAgeNum=ageNum;
+    } else if(hasGender&&lastAgeNum!==null){
+      // Empty age cell + gender symbol → female row of same age
+      ageNum=lastAgeNum;
+    }
+    if(ageNum!==undefined&&!isNaN(ageNum)&&ageNum>=0&&ageNum<=90){
+      let key;
+      if(hasGender){
+        const g=genCell==='♂ Masc.'?'M':'F';
+        key=ageNum+'_'+g;
+      } else {
+        key=ageNum;
+      }
+      ageData[key]={};
+      deds.forEach(d=>{const v=row[d.col];if(v!=null&&v!==''&&!isNaN(Number(v)))ageData[key][d.value]=Math.round(Number(v));});
+    }
+  }
+  const admin=meta['ADMIN (USD)']?Math.round(Number(meta['ADMIN (USD)'])):0;
+  const supl=meta['SUPL (USD)']?Math.round(Number(meta['SUPL (USD)'])):0;
+  return{clave:String(meta['CLAVE']).trim(),compania:meta['COMPAÑIA']||'',nombre:meta['NOMBRE COMPLETO']||'',
+    moneda:String(meta['MONEDA']||'USD').trim(),nivel:meta['NIVEL']||'',
+    admin:isNaN(admin)?0:admin,supl:isNaN(supl)?0:supl,deds,ageData,children,
+    isMXN:String(meta['MONEDA']||'').trim().toUpperCase()==='MXN'};
+}
+
+// ── Parse COBERTURAS ──────────────────────────────────────────────────────────
+function parseCoverages(rows){
+  if(!rows||rows.length<7)return null;
+  const hdrRow=rows[6];if(!hdrRow)return null;
+  // No cortar en la primera celda vacía: una columna en blanco en medio del
+  // encabezado (ej. una clave que se borró u olvidó capturar) no debe tumbar
+  // todos los planes que están más a la derecha en la hoja.
+  let planKeys=[];
+  for(let c=2;c<hdrRow.length;c++){const v=String(hdrRow[c]||'').trim();if(v)planKeys.push({key:v,col:c});}
+  if(!planKeys.length)return null;
+  // Si el encabezado de COBERTURAS tiene una clave repetida (error de captura en
+  // el Sheet), quedarse solo con la primera columna para no duplicar la misma
+  // cobertura como si fueran dos planes distintos.
+  const seenKeys=new Set();
+  planKeys=planKeys.filter(p=>{if(seenKeys.has(p.key))return false;seenKeys.add(p.key);return true;});
+  const sections={},secOrder=[];let curSec='';
+  for(let r=7;r<rows.length;r++){
+    const row=rows[r];if(!row)continue;
+    const secCell=String(row[0]||'').trim(),cobCell=String(row[1]||'').trim();
+    if(!cobCell)continue;if(secCell)curSec=secCell;if(!curSec)continue;
+    if(!sections[curSec]){sections[curSec]=[];secOrder.push(curSec);}
+    const vals={};planKeys.forEach(p=>{vals[p.key]=String(row[p.col]||'').trim();});
+    sections[curSec].push({cob:cobCell,vals});
+  }
+  return{planKeys:planKeys.map(p=>p.key),sections,secOrder};
+}
+
+// ── Cotizar ───────────────────────────────────────────────────────────────────
+// getUsedDed(plan,dedRef) recibe dedRef en DOS contextos distintos, y hay que
+// distinguirlos para NAC/PA_MXN (planes con deducibles nativos en MXN):
+//  1) "Deducible preferido" del selector global — SIEMPRE en USD (ej. 5000).
+//  2) Un valor de deducible YA resuelto/nativo del plan — ej. el que llega
+//     directo de un clic en un pill de la tarjeta (planDedsSel), que ya está
+//     en MXN (ej. 68000). Este NO debe volver a convertirse — si no, la
+//     conversión USD→MXN lo dispara muy por encima del deducible más alto
+//     disponible y siempre termina cayendo en ese máximo (bug reportado
+//     2026-07-10: siempre seleccionaba $210,500 en BUPA Nacional).
+// Por eso ambas ramas MXN-nativas primero revisan si dedRef YA es un valor
+// válido del plan tal cual (avail.includes(dedRef)) antes de intentar
+// convertir desde USD.
+function getUsedDed(plan,dedRef){
+  // NAC plans: los deducibles ya están en MXN tal cual vienen del sheet — no
+  // hay tabla fija de equivalencia (la anterior quedó obsoleta al cargar las
+  // tarifas BUPA Nacional Plus V9, que trajeron una escalera de deducibles
+  // distinta). Si dedRef ya es un deducible nativo del plan, se usa tal cual;
+  // si no (viene del selector global en USD), se convierte con el TC vigente
+  // y se busca el escalón MXN real más cercano.
+  if(NAC_PLANES.includes(plan.clave)){
+    const avail=plan.deds.map(d=>d.value).filter(v=>v!==null);
+    if(!avail.length)return null;
+    if(avail.includes(dedRef))return dedRef;
+    const fxRate=fx||17.5;
+    const mxnTarget=dedRef*fxRate;
+    return avail.reduce((a,b)=>Math.abs(b-mxnTarget)<Math.abs(a-mxnTarget)?b:a);
+  }
+  // PA-MUNDIAL/PA-PREF: convert USD dedRef to MXN at 20:1 (salvo que dedRef ya
+  // sea un valor nativo MXN del plan — mismo caso que NAC arriba).
+  if(PA_MXN_DED_PLANES.includes(plan.clave)){
+    const avail=plan.deds.filter(d=>!d.isCombined&&d.value!==null).map(d=>d.value);
+    if(!avail.length)return null;
+    if(avail.includes(dedRef))return dedRef;
+    const mxnTarget=PA_USD_TO_MXN[dedRef];
+    if(mxnTarget&&avail.includes(mxnTarget))return mxnTarget;
+    // Closest available MXN ded
+    const usdVals=Object.keys(PA_USD_TO_MXN).map(Number);
+    const closestUSD=usdVals.reduce((a,b)=>Math.abs(b-dedRef)<Math.abs(a-dedRef)?b:a);
+    const mxnEquiv=PA_USD_TO_MXN[closestUSD];
+    if(avail.includes(mxnEquiv))return mxnEquiv;
+    return avail.reduce((a,b)=>Math.abs(b-mxnEquiv)<Math.abs(a-mxnEquiv)?b:a);
+  }
+  // Standard plans: only auto-match non-combined deds
+  // Combined deds (isCombined=true) are only selectable via pill — never auto-matched
+  const nonCombined=plan.deds.filter(d=>!d.isCombined&&d.value!==null);
+  const avail=nonCombined.map(d=>d.value);
+  if(!avail.length)return null;
+  if(avail.includes(dedRef))return dedRef;
+  return avail.reduce((a,b)=>Math.abs(b-dedRef)<Math.abs(a-dedRef)?b:a);
+}
+function getAgeVal(plan,age,ded,gen){
+  const a=Math.min(age,84);
+  // Try gender-specific key first (BUPA Nacional)
+  if(gen){
+    const gkey=a+'_'+gen;
+    if(plan.ageData[gkey]!==undefined&&plan.ageData[gkey][ded]!=null)return plan.ageData[gkey][ded];
+    // Fallback to max age with gender
+    const gkeys=Object.keys(plan.ageData).filter(k=>k.endsWith('_'+gen));
+    if(gkeys.length>0){
+      const maxGA=Math.max(...gkeys.map(k=>parseInt(k)));
+      if(age>maxGA)return plan.ageData[maxGA+'_'+gen]?.[ded]||null;
+    }
+  }
+  // Standard lookup (no gender)
+  if(plan.ageData[a]!==undefined&&plan.ageData[a][ded]!=null)return plan.ageData[a][ded];
+  const ages=Object.keys(plan.ageData).filter(k=>!String(k).includes('_')).map(Number).sort((a,b)=>a-b);
+  if(ages.length===0)return null;
+  const maxAge=ages[ages.length-1];
+  if(age>maxAge)return plan.ageData[maxAge]?.[ded]||null;
+  return null;
+}
+function cotizarPlan(plan,tA,cA,hijosArr,dedRef,gT,gC){
+  if(!plan||!plan.ageData)return null;
+  // ── Meridian Plus: BMI-MER base + endoso fijo por edad/rol ──────────────────
+  // Endoso solo disponible en ded 500, 1000 y 2500 USD.
+  // Si el deducible seleccionado no está en ese set, se aproxima al más cercano permitido.
+  // Titular o cónyuge >68 años → plan no disponible.
+  const isMerPlus=plan.clave==='BMI-MER-PLUS';
+  if(isMerPlus){
+    const basePlan=plans['BMI-MER'];
+    if(!basePlan)return{annual:null,reason:'BMI-MER no cargado'};
+    // Verificar que titular y cónyuge estén en rango del endoso
+    if(tA>68)return{annual:null,reason:'Edad titular >68 — plan no disponible'};
+    if(!isNaN(cA)&&cA>=18&&cA>68)return{annual:null,reason:'Edad cónyuge >68 — plan no disponible'};
+    // Determinar deducible válido para el endoso (más cercano entre 500/1000/2500)
+    const endoDedOverride=planDedOverride[plan.clave];
+    let endoDed;
+    if(endoDedOverride&&MER_PLUS_ENDORSED_DEDS.includes(endoDedOverride)){
+      endoDed=endoDedOverride;
+    } else {
+      // Aproximar dedRef al deducible de endoso más cercano
+      endoDed=MER_PLUS_ENDORSED_DEDS.reduce((a,b)=>Math.abs(b-dedRef)<Math.abs(a-dedRef)?b:a);
+    }
+    // Cotizar base BMI-MER forzando el mismo deducible que el endoso
+    const baseResult=cotizarPlan(basePlan,tA,cA,hijosArr,endoDed,gT,gC);
+    if(!baseResult||!baseResult.annual)return{annual:null,reason:'Sin tarifa base BMI-MER'};
+    // Calcular endoso
+    const tEnd=getMerPlusEndoso(tA,false)||0;
+    let endoso=tEnd;
+    if(!isNaN(cA)&&cA>=18){
+      const cEnd=getMerPlusEndoso(cA,true)||0;
+      endoso+=cEnd;
+    }
+    // Hijos: sin endoso Meridian Plus
+    const dedLabel='USD $'+endoDed.toLocaleString();
+    // Desglose: tomar los integrantes de la base BMI-MER y atribuir el endoso Meridian Plus
+    const members=(baseResult.members||[]).map(m=>({...m}));
+    if(members[0])members[0].endoso=(getMerPlusEndoso(tA,false)||0);
+    if(members[1]&&members[1].role==='Cónyuge')members[1].endoso=(getMerPlusEndoso(cA,true)||0);
+    return{
+      annual:(baseResult.annual||0)+(endoso||0),
+      isMXN:false,
+      base:baseResult.base+endoso,
+      admin:basePlan.admin,
+      supl:basePlan.supl,
+      dedUsed:endoDed,
+      dedLabel,
+      exactMatch:endoDed===dedRef,
+      isInd:false,
+      accEndoso:baseResult.accEndoso||0,
+      merPlusEndoso:endoso,
+      members
+    };
+  }
+  // ─────────────────────────────────────────────────────────────────────────────
+  const usedDed=planDedOverride[plan.clave]||getUsedDed(plan,dedRef);
+  if(usedDed===null)return{annual:null,reason:'Sin deducibles'};
+  const isNAC=NAC_PLANES.includes(plan.clave);
+  const gTit=isNAC?(gT||'M'):null;
+  const gCon=isNAC?(gC||'M'):null;
+  const tV=getAgeVal(plan,tA,usedDed,gTit);
+  if(!tV)return{annual:null,reason:'Fuera de rango'};
+  let base=tV;
+  // Desglose por integrante (base en moneda del plan; acc/endoso siempre USD)
+  const members=[{role:'Titular',age:tA,gen:gTit||gT||'M',base:tV,acc:0}];
+  if(!isNaN(cA)&&cA>=18){const cV=getAgeVal(plan,cA,usedDed,gCon);if(cV){base+=cV;members.push({role:'Cónyuge',age:cA,gen:gCon||gC||'M',base:cV,acc:0});}}
+  const isInd=HIJO_INDIVIDUAL.includes(plan.clave);
+  const isPA=PA_PLANES.includes(plan.clave);
+  if(hijosArr.length>0){
+    if(isNAC){
+      // BUPA Nacional: individual by age and gender
+      hijosArr.forEach((h,hi)=>{
+        if(isNaN(h.age)||h.age<0)return;
+        const v=getAgeVal(plan,Math.min(h.age,84),usedDed,h.gen||'M');
+        if(v){base+=v;members.push({role:'Hijo '+(hi+1),age:h.age,gen:h.gen||'M',base:v,acc:0});}
+      });
+    } else if(isPA){
+      const hjMenores=hijosArr.filter(h=>!isNaN(h.age)&&h.age>=0&&h.age<24);
+      const hjAdultos=hijosArr.filter(h=>!isNaN(h.age)&&h.age>=24);
+      if(hjMenores.length>0){
+        const g=Math.min(hjMenores.length,3);
+        const cv=plan.children[g]?.[usedDed];
+        if(cv){base+=cv;members.push({role:hjMenores.length>1?('Hijos menores ('+hjMenores.length+')'):'Hijo menor',grouped:true,count:hjMenores.length,base:cv,acc:0});}
+      }
+      hjAdultos.forEach((h,hi)=>{
+        const v=getAgeVal(plan,Math.min(h.age,85),usedDed);
+        if(v){base+=v;members.push({role:'Hijo adulto '+(hi+1),age:h.age,gen:h.gen||'M',base:v,acc:0});}
+      });
+    } else if(isInd){
+      hijosArr.forEach((h,hi)=>{if(isNaN(h.age)||h.age<0)return;const v=getAgeVal(plan,Math.min(h.age,23),usedDed);if(v){base+=v;members.push({role:'Hijo '+(hi+1),age:h.age,gen:h.gen||'M',base:v,acc:0});}});
+    } else {
+      const g=Math.min(hijosArr.length,3);const cv=plan.children[g]?.[usedDed];if(cv){base+=cv;members.push({role:hijosArr.length>1?('Hijos ('+hijosArr.length+')'):'Hijo',grouped:true,count:hijosArr.length,base:cv,acc:0});}
+    }
+  }
+  let totalMXN=null,total=base+plan.admin+plan.supl;
+  // Endoso accidentes RB
+  const accEndoso=(opts&&opts.rb_acc)?rbAccEndoso(plan,tA,cA,hijosArr,usedDed):0;
+  total+=accEndoso;
+  // Atribuir el endoso de accidentes a cada integrante (solo planes RB, hijos individuales)
+  if(accEndoso>0&&RB_ACC_PLANES.includes(plan.clave)){
+    const tAcc=RB_ACC_T[usedDed];
+    if(tAcc)members.forEach(m=>{if(!m.grouped&&typeof m.age==='number'&&m.age>=0)m.acc=tAcc[rbAccBand(m.age)];});
+  }
+  if(plan.isMXN){
+    let bMXN=base;
+    // BUPA Nacional: admin=1600 + asist.extranjero=1632 (both always included)
+    // BUPA Internacional: emisión=937.5
+    const isBUPAnac=NAC_PLANES.includes(plan.clave);
+    // Descuentos "Nuevo negocio BUPA" y "Descuento edad BUPA" solo aplican a
+    // Elite/Premier/Select (BUPA Internacional) — BUPA Nacional NO los recibe.
+    if(plan.compania==='BUPA'&&!isBUPAnac){let d=0;if(opts.bupa_nn)d+=.10;if(opts.bupa_edad){const tOk=tA>=5&&tA<=50;const cOk=isNaN(cA)||cA<18||(cA>=5&&cA<=50);if(tOk&&cOk)d+=.05;}if(d>0)bMXN=Math.round(bMXN*(1-d));}
+    if(plan.compania==='SUREGO'){let dsg=0;if(opts.sg_nn)dsg+=.10;if(opts.sg_fam)dsg+=.05;if(dsg>0)bMXN=Math.round(bMXN*(1-dsg));}
+    // Cargo obligatorio BUPA Internacional: $625 MXN por asegurado (titular + cónyuge si aplica)
+    // Se suma a la prima neta antes de descuentos y emisión
+    const bupaCargo=(!isBUPAnac&&plan.compania==='BUPA')?(625+(!isNaN(cA)&&cA>=18?625:0)):0;
+    if(bupaCargo>0)bMXN+=bupaCargo;
+    const em=isBUPAnac?(1600+1632):plan.compania==='BUPA'?937.5:plan.compania==='SUREGO'?1850:(plan.compania==='PanAmerican Life'||plan.compania==='PanAmerican')?1040:0;
+    totalMXN=Math.round((bMXN+em)*1.16);
+    total=fx?totalMXN/fx:totalMXN; // fallback to MXN value if no FX yet
+    return{annual:total,totalMXN,base,baseMXN:bMXN,isMXN:true,admin:plan.admin,supl:plan.supl,
+           dedUsed:usedDed,dedLabel:plan.deds.find(d=>d.value===usedDed)?.label||'',
+           exactMatch:usedDed===dedRef,emision:em,isInd,accEndoso,members};
+  }
+  return{annual:total,isMXN:false,base,admin:plan.admin,supl:plan.supl,
+         dedUsed:usedDed,dedLabel:plan.deds.find(d=>d.value===usedDed)?.label||'',
+         exactMatch:usedDed===dedRef,isInd,accEndoso,members};
+}
+
+function fmtU(n){return'USD '+Math.round(n).toLocaleString('es-MX')}
+function fmtM(n){return'MXN $'+Math.round(n).toLocaleString('es-MX')}
+
+// ── Chips ─────────────────────────────────────────────────────────────────────
+function buildChips(){
+  const area=document.getElementById('chips-area');area.innerHTML='';
+  const groups={};
+  Object.keys(plans).forEach(k=>{const co=plans[k].compania||'Otro';if(!groups[co])groups[co]=[];groups[co].push(k);});
+  // Si dos claves de la misma compañía muestran el mismo nombre (ej. dos
+  // pestañas duplicadas del mismo plan en el Sheet, como "Direct VIP" de
+  // VUMI), solo se muestra el botón de la PRIMERA que se cargó — el usuario
+  // confirmó 2026-07-10 que debe quedarse el botón de la izquierda (el que
+  // aparece primero) y quitarse el duplicado de la derecha. No depende de
+  // conocer la clave exacta: se detecta por nombre visible repetido dentro
+  // de la misma compañía.
+  Object.keys(groups).forEach(co=>{
+    const seenNames=new Set();
+    groups[co]=groups[co].filter(k=>{
+      const name=plans[k].nombre||k;
+      if(seenNames.has(name))return false;
+      seenNames.add(name);
+      return true;
+    });
+  });
+  Object.keys(groups).sort().forEach(co=>{
+    const row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin-bottom:4px';
+    row.innerHTML=`<span style="font-size:10px;color:#888;min-width:55px">${co}</span>`;
+    groups[co].forEach(k=>{
+      const p=plans[k];const c=CLR[k]||{cl:'#666',bg:'#eee',tc:'#333'};
+      const btn=document.createElement('button');
+      btn.className='chip'+(active[k]?' on':'');
+      if(active[k]){btn.style.background=c.bg;btn.style.color=c.tc;btn.style.borderColor=c.cl;}
+      btn.textContent=p.nombre||k;
+      btn.onclick=()=>{active[k]=!active[k];delete planDedsSel[k];buildChips();calcular();};
+      row.appendChild(btn);
+    });
+    area.appendChild(row);
+  });
+}
+
+// ── Coverage styling ──────────────────────────────────────────────────────────
+function styleVal(v){
+  // Celda vacía en COBERTURAS = el plan no cubre esa prestación (confirmado
+  // con el usuario 2026-07-10), no "dato faltante" — se muestra igual que
+  // "Sin cobertura".
+  if(v===null||v===undefined||String(v).trim()==='')return'❌';
+  const s=String(v).trim().replace(/^★\s*/,'');
+  const lv=s.toLowerCase();
+  // 100% o el número 1 que Sheets guarda internamente para celdas de porcentaje formateadas como 100%
+  if(s==='1'||s==='100%'||s==='100 %')return'✅';
+  // Sin cobertura en cualquier variante
+  if(lv==='sin cobertura'||lv==='sin cobertura.'||lv==='0'||s==='0%'||s==='0 %')return'❌';
+  if(lv==='incluido'||lv==='incluida')return`<span class="val-inc">✓ ${s}</span>`;
+  if(lv==='excluido'||lv==='excluida')return`<span class="val-exc">✗ ${s}</span>`;
+  if(lv.startsWith('límite')||lv.startsWith('limite'))return`<span class="val-lim">${s}</span>`;
+  // Número plano grande sin formato (ej. suma asegurada de BUPA Nacional
+  // capturada como "50000000") → formatear como monto en pesos mexicanos.
+  if(/^\d{4,}$/.test(s))return'$'+Number(s).toLocaleString('es-MX')+' MXN';
+  return s;
+}
+
+// ── Comparativo ───────────────────────────────────────────────────────────────
+// Planes BMI "Sin EE.UU." (cobertura Nacional): reutilizan las coberturas de sus
+// contrapartes internacionales en el Sheet, pero NO incluyen red hospitalaria en
+// Estados Unidos. Se fuerza ❌ en ese renglón específico sin tocar el Google Sheet.
+const SIN_EEUU_PLANES=['BMI-AZU-M','BMI-I1M-M','BMI-I3M-M'];
+// Por diseño (confirmado con el usuario 2026-07-10) estos planes NO tienen columna
+// propia en COBERTURAS — reutilizan la del plan base vía alias en código, y solo
+// se fuerzan dos renglones: Zona de cobertura → NACIONAL, Red Hospitalaria USA → ❌.
+const NAC_COVERAGE_ALIAS={'BMI-AZU-M':'BMI-AZU','BMI-I1M-M':'BMI-I1M','BMI-I3M-M':'BMI-I3M'};
+function isUSANetworkRow(label){return /usa/i.test(label||'');}
+function isZonaCoberturaRow(label){return /zona\s+de\s+cobertura/i.test(label||'');}
+function renderComparativo(){
+  const sec=document.getElementById('cmp-section');
+  if(!coverages||!coverages.secOrder||!coverages.secOrder.length){sec.style.display='none';return;}
+  const activeKeys=Object.keys(active).filter(k=>active[k]);
+  // Un plan entra al comparativo si tiene columna propia en COBERTURAS, o si es
+  // un plan "Sin EE.UU." cuyo alias (plan base) sí tiene columna.
+  const covPlanKeys=activeKeys.filter(k=>{
+    const lookupKey=NAC_COVERAGE_ALIAS[k]||k;
+    return coverages.planKeys.includes(lookupKey);
+  });
+  if(!covPlanKeys.length){sec.style.display='none';return;}
+  sec.style.display='block';
+  if(!activeSec||!coverages.sections[activeSec])activeSec=coverages.secOrder[0];
+  const tabsEl=document.getElementById('sec-tabs');tabsEl.innerHTML='';
+  coverages.secOrder.forEach(s=>{
+    const t=document.createElement('button');t.className='tab'+(s===activeSec?' on':'');
+    t.textContent=s;t.onclick=()=>{activeSec=s;renderComparativo();};tabsEl.appendChild(t);
+  });
+  const combos=buildCombos(covPlanKeys);
+  const rows=coverages.sections[activeSec]||[];
+  const content=document.getElementById('cmp-content');
+  if(!combos.length){content.innerHTML='<p style="padding:16px;font-size:12px;color:#888">Sin coberturas en esta sección.</p>';return;}
+  if(!rows.length){content.innerHTML='<p style="padding:16px;font-size:12px;color:#888">Sin coberturas en esta sección.</p>';return;}
+  // Agrupar columnas por plan (varias columnas = varios deducibles del mismo plan)
+  // para no repetir el desglose de coberturas por cada deducible — solo el precio
+  // y el deducible cambian por columna; la cobertura es una sola por plan (colspan).
+  const groups=[]; const groupIdx={};
+  combos.forEach(cm=>{
+    if(!(cm.k in groupIdx)){groupIdx[cm.k]=groups.length;groups.push({k:cm.k,p:cm.p,c:cm.c,items:[]});}
+    groups[groupIdx[cm.k]].items.push(cm);
+  });
+  const priced=combos.filter(cm=>cm.r&&(cm.r.annual||cm.r.totalMXN));
+  const totalOf=cm=>cm.r.isMXN?cm.r.totalMXN:Math.round((cm.r.annual||0)*(fx||17.5));
+  const minTotal=priced.length?Math.min(...priced.map(totalOf)):Infinity;
+  let html='<table class="cmp-table"><thead><tr><th class="cob" rowspan="2">Cobertura</th>';
+  groups.forEach(g=>{
+    html+=`<th colspan="${g.items.length}" style="background:${g.c.cl}">${g.p.nombre}</th>`;
+  });
+  html+='</tr><tr>';
+  groups.forEach(g=>{
+    g.items.forEach(cm=>{
+      const dedLbl=cm.r&&cm.r.dedLabel?cm.r.dedLabel:('USD $'+cm.ded.toLocaleString());
+      const hasPrice=cm.r&&(cm.r.annual||cm.r.totalMXN);
+      const isBest=hasPrice&&totalOf(cm)===minTotal;
+      html+=`<th style="background:${cm.c.cl};min-width:96px">
+        <div style="font-size:9px;opacity:.85;font-weight:400">Ded. ${dedLbl}</div>
+        ${hasPrice?`<div style="font-size:10.5px;font-weight:700;margin-top:2px">$${totalOf(cm).toLocaleString('es-MX')} MXN</div>`:'<div style="font-size:9px;opacity:.7">N/D</div>'}
+        ${isBest?'<div style="font-size:8px;background:rgba(255,255,255,.25);border-radius:8px;padding:1px 6px;margin-top:2px;display:inline-block">★ Mejor precio</div>':''}
+      </th>`;
+    });
+  });
+  html+='</tr></thead><tbody>';
+  rows.forEach(row=>{
+    const isUSARow=isUSANetworkRow(row.cob);
+    const isZonaRow=isZonaCoberturaRow(row.cob);
+    const groupVals=groups.map(g=>{
+      const lookupKey=NAC_COVERAGE_ALIAS[g.k]||g.k;
+      let v=row.vals[lookupKey]||'';
+      if(isUSARow&&SIN_EEUU_PLANES.includes(g.k))v='Sin cobertura';
+      else if(isZonaRow&&SIN_EEUU_PLANES.includes(g.k))v='NACIONAL';
+      return v;
+    });
+    const bestIdx=bestValueIndices(row.cob,groupVals);
+    html+=`<tr><td class="cob">${row.cob}</td>`;
+    groups.forEach((g,i)=>{
+      const isBestCell=bestIdx.includes(i);
+      html+=`<td colspan="${g.items.length}"${isBestCell?' style="background:#e1f5ee;box-shadow:inset 0 0 0 1.5px #0F6E56"':''}>${styleVal(groupVals[i])}${isBestCell?' <span title="Mejor beneficio en esta cobertura" style="color:#0F6E56;font-size:10px">★</span>':''}</td>`;
+    });
+    html+='</tr>';
+  });
+  html+='</tbody></table>';
+  content.innerHTML=html;
+}
+
+
+// ── Calcular ──────────────────────────────────────────────────────────────────
+function calcular(){
+  const tA=parseInt(document.getElementById('at').value);
+  const cA=parseInt(document.getElementById('ac').value);
+  const dedRef=parseInt(document.getElementById('dref').value);
+  const area=document.getElementById('rarea');
+  const hijosValidos=hijos.filter(h=>!isNaN(h.age)&&h.age>=0);
+  const niv=NIVELES[activeNivel];
+
+  if(isNaN(tA)||tA<18){
+    area.innerHTML='<p style="font-size:13px;color:#888;text-align:center;padding:1rem 0">Ingresa la edad del titular para ver la cotización.</p>';
+    renderComparativo();return;
+  }
+  if(isNaN(dedRef)){
+    area.innerHTML='<p style="font-size:13px;color:#888;text-align:center;padding:1rem 0">Elige un deducible preferido para ver la cotización.</p>';
+    renderComparativo();return;
+  }
+
+  // Un plan puede tener varios deducibles seleccionados (pills en su tarjeta,
+  // multi-select vía toggleDedSel) — cada combinación (plan, deducible) genera
+  // su propia tarjeta de cotización.
+  const results=[];
+  Object.keys(plans).forEach(k=>{
+    if(!active[k])return;
+    const p=plans[k];const c=CLR[k]||{cl:'#666',bg:'#f5f5f5',tc:'#333'};
+    if(!planDedsSel[k]||!planDedsSel[k].length)planDedsSel[k]=[getUsedDed(p,dedRef)];
+    const seen=new Set();
+    planDedsSel[k].forEach(dv=>{
+      const r=cotizarPlan(p,tA,isNaN(cA)?NaN:cA,hijosValidos,dv,genTitular,genConyuge);
+      const usedDed=r?.dedUsed||getUsedDed(p,dv);
+      const dedKey=usedDed!=null?usedDed:('x'+dv);
+      if(seen.has(dedKey))return;
+      seen.add(dedKey);
+      let matWarn=null;
+      if(activeNivel==='premium'&&MAT_MAX_DED[k]&&usedDed>MAT_MAX_DED[k])
+        matWarn=`⚠ Maternidad no aplica con ded. $${(usedDed||0).toLocaleString()} — máx. $${MAT_MAX_DED[k].toLocaleString()}`;
+      results.push({k,ded:dv,p,c,r,matWarn});
+    });
+  });
+
+  const hasPan=false; // PA plans now have real rates — no manual card needed
+  results.sort((a,b)=>{if(!a.r?.annual)return 1;if(!b.r?.annual)return-1;return a.r.annual-b.r.annual;});
+
+  if(!results.length&&!hasPan){
+    area.innerHTML='<p style="font-size:13px;color:#888;text-align:center;padding:1rem 0">Activa al menos un plan.</p>';
+    renderComparativo();return;
+  }
+
+  // Header with nivel badge
+  const nombre=document.getElementById('nombre-cliente').value.trim();
+  let html=`<div style="margin-bottom:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+    ${nombre?`<span style="font-size:14px;font-weight:500;color:#1a1a1a">${nombre}</span><span style="font-size:11px;color:#ccc">·</span>`:''}
+    <span style="font-size:11px;color:#888">Cotización —</span>
+    <span style="display:inline-flex;align-items:center;padding:2px 10px;border-radius:20px;font-size:12px;font-weight:500;background:${niv?.bg||'#eee'};color:${niv?.color||'#333'}">${niv?.label||''}</span>
+  </div>`;
+
+  html+='<div style="display:flex;gap:8px;flex-wrap:wrap">';
+  results.forEach((item,i)=>{
+    const{k,p,c,r,matWarn}=item;const best=i===0&&r?.annual;
+    const availDeds=p.deds.filter(d=>d.value!==null);
+    const selDed=r?.dedUsed||getUsedDed(p,item.ded);
+    html+=`<div class="rc" style="border-color:${best?c.cl:'#d4d4d0'};border-width:${best?'1.5px':'.5px'}">`;
+    if(best)html+=`<div style="background:${c.bg};padding:3px 13px"><span style="font-size:10px;font-weight:500;color:${c.tc}">Mejor precio</span></div>`;
+    const isNACcard=NAC_PLANES.includes(k)||PA_MXN_DED_PLANES.includes(k);
+    const dedCurrLabel=isNACcard?`MX $${selDed.toLocaleString()}`:`USD $${selDed.toLocaleString()}`;
+    html+=`<div class="rhd">
+      <p style="font-size:10px;color:#888;margin:0 0 1px">${p.compania} · Ded. ${dedCurrLabel}</p>
+      <p style="font-size:13px;font-weight:500;margin:0;color:${c.cl}">${p.nombre}</p>
+      ${matWarn?`<div class="warn">${matWarn}</div>`:''}
+    </div>`;
+    // Deductible pills — multi-select: clic agrega/quita el deducible de la
+    // selección de este plan; cada deducible seleccionado genera su propia
+    // tarjeta. Meridian Plus: solo 500, 1000, 2500.
+    const pillDeds=k==='BMI-MER-PLUS'
+      ? MER_PLUS_ENDORSED_DEDS.map(v=>({value:v,label:'USD $'+v.toLocaleString()}))
+      : availDeds;
+    const selSet=new Set(planDedsSel[k]||[]);
+    if(pillDeds.length){
+      html+=`<div class="ded-row"><span style="font-size:10px;color:#aaa;margin-right:2px">Ded.:</span>`;
+      pillDeds.forEach(d=>{html+=`<button class="ded-pill${(selSet.has(d.value)||d.value===selDed)?' sel':''}" onclick="toggleDedSel('${k}',${d.value})">${d.label}</button>`;});
+      html+=`</div>`;
+    }
+    if(!r||!r.annual){
+      html+=`<div style="padding:10px 13px;font-size:12px;color:#888">${r?.reason||'N/D'}</div>`;
+    }else if(r.isMXN){
+      html+=`<div class="rrow tot"><span>Prima anual</span><span style="color:${c.cl}">${fmtM(r.totalMXN)}</span></div>`;
+      if(fx)html+=`<div class="rrow" style="background:#fafaf9;font-size:12px"><span style="color:#888">Equiv. USD</span><span style="font-weight:500">${fmtU(r.annual)}</span></div>`;
+    }else{
+      html+=`<div class="rrow tot"><span>Prima anual</span><span style="color:${c.cl}">${fmtU(r.annual)}</span></div>`;
+      if(fx)html+=`<div class="rrow" style="background:#fafaf9;font-size:12px"><span style="color:#888">En pesos</span><span style="font-weight:500">${fmtM(r.annual*fx)}</span></div>`;
+    }
+    if(r?.isInd&&hijosValidos.length>0)html+=`<div style="padding:3px 13px 6px;font-size:10px;color:#0F6E56">✓ Hijos cotizados por edad individual</div>`;
+    html+='</div>';
+  });
+
+  
+
+  html+='</div>';
+  html+=`<p style="font-size:11px;color:#aaa;margin-top:8px;text-align:right">Datos en tiempo real · Google Sheets · ${new Date().toLocaleDateString('es-MX')}</p>`;
+  area.innerHTML=html;
+  renderComparativo();
+  showPrintBtn();
+}
+
+// Multi-select por plan: clic en un pill agrega/quita ese deducible de la
+// selección del plan k. Si solo queda uno seleccionado, no se puede deseleccionar
+// (siempre debe quedar al menos un deducible activo por plan).
+function toggleDedSel(k,ded){
+  if(!planDedsSel[k]||!planDedsSel[k].length){
+    const dedRef=parseInt(document.getElementById('dref').value);
+    planDedsSel[k]=[getUsedDed(plans[k],isNaN(dedRef)?ded:dedRef)];
+  }
+  const idx=planDedsSel[k].indexOf(ded);
+  if(idx>=0){if(planDedsSel[k].length>1)planDedsSel[k].splice(idx,1);}
+  else planDedsSel[k].push(ded);
+  planDedsSel[k].sort((a,b)=>a-b);
+  calcular();
+}
+function toggleOpt(w){opts[w]=!opts[w];document.getElementById('t'+w).classList.toggle('on',opts[w]);calcular();}
+
+async function fetchFX(){
+  try{
+    const r=await fetch('https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json');
+    const d=await r.json();fx=d.usd?.mxn;
+    document.getElementById('fx-display').textContent='$'+fx.toFixed(2)+' MXN/USD';
+  }catch{fx=17.5;document.getElementById('fx-display').textContent='$17.50 MXN/USD (ref.)';}
+  calcular();
+}
+
+async function loadData(){
+  try{
+    const resp=await fetch(APPS_URL);
+    if(!resp.ok)throw new Error('HTTP '+resp.status);
+    const raw=await resp.json();
+    let count=0;
+    const debugLog=[];
+    Object.keys(raw).forEach(s=>{
+      if(s==='COBERTURAS'){coverages=parseCoverages(raw[s]);return;}
+      const rows=raw[s];
+      const p=parseSheet(rows);
+      if(p&&p.clave){
+        plans[p.clave]=p;count++;
+        debugLog.push('✅ '+p.clave+' (sheet:'+s+') → '+Object.keys(p.ageData).length+' ages, '+p.deds.length+' deds ['+p.deds.map(d=>d.value).filter(v=>v).slice(0,4).join(',')+']');
+      } else {
+        const r0=rows&&rows[0]?JSON.stringify(rows[0]).slice(0,80):'(empty)';
+        const r9=rows&&rows[9]?JSON.stringify(rows[9]).slice(0,100):'(no row 9)';
+        debugLog.push('❌ '+s+' → row0:'+r0+' | dedRow:'+r9);
+      }
+    });
+    window._debugPlanes=debugLog;
+    console.log('=== PLANES DEBUG ===');
+    debugLog.forEach(l=>console.log(l));
+    if(!count)throw new Error('No se encontraron planes válidos');
+    // Start with no plans selected — user chooses nivel
+    Object.keys(plans).forEach(k=>{active[k]=false;});
+    document.getElementById('loading-state').style.display='none';
+    document.getElementById('main-ui').style.display='block';
+    document.getElementById('title-plans').textContent=count+' planes cargados';
+    // Debug button — shows which plans loaded/failed
+    const dbgBtn=document.createElement('button');
+    dbgBtn.textContent='🔍 Debug planes';
+    dbgBtn.style.cssText='position:fixed;bottom:12px;right:12px;z-index:9999;background:#1A3A5C;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:11px;cursor:pointer;opacity:.7';
+    dbgBtn.onclick=()=>{
+      const log=window._debugPlanes||['No debug data'];
+      const failed=log.filter(l=>l.startsWith('❌'));
+      const ok=log.filter(l=>l.startsWith('✅'));
+      // Also test cotizarPlan for a few key plans
+      const testAge=35;const testDed=5000;
+      const testPlans=['BUPA-NAC-20M','BUPA-NAC-50M','PA-MUNDIAL','PA-PREF','PA-WACCESS','PA-ACCESS'];
+      const calcTests=testPlans.map(k=>{
+        const p=plans[k];if(!p)return k+': NOT LOADED';
+        const usedDed=getUsedDed(p,testDed);
+        const allKeys=Object.keys(p.ageData);
+        const sample=allKeys.slice(0,4).join(',');
+        // Try both key formats
+        const rateGender=usedDed!==null?(p.ageData['35_M']?.[usedDed]??'no 35_M'):'-';
+        const rateNum=usedDed!==null?(p.ageData[35]?.[usedDed]??'no 35'):'-';
+        const realDeds=p.deds.map(d=>d.value).filter(v=>v!==null).join(',');
+        return k+':\n  usedDed='+usedDed+'  rate[35_M]='+rateGender+'  rate[35]='+rateNum+'\n  sampleKeys='+sample+'\n  deds='+realDeds;
+      }).join('\n');
+      // Diagnóstico de la hoja COBERTURAS: qué planes tiene columna y cuáles
+      // de los planes con tarifa cargada NO tienen columna de coberturas
+      // (causa típica: falta la clave en el encabezado, texto no coincide
+      // exacto, o hay una celda vacía antes en la fila 7 que corta el parseo).
+      let covInfo;
+      if(!coverages){
+        covInfo='COBERTURAS: no se pudo parsear la hoja (revisa que exista la pestaña "COBERTURAS").';
+      } else {
+        const missingCov=Object.keys(plans).filter(k=>!coverages.planKeys.includes(k));
+        covInfo='TODAS las claves de tarifa cargadas ('+Object.keys(plans).length+'): ['+Object.keys(plans).join(', ')+']\n\n'+
+          'COBERTURAS: '+coverages.planKeys.length+' columnas detectadas → ['+coverages.planKeys.join(', ')+']\n'+
+          'Secciones: '+coverages.secOrder.join(', ')+'\n'+
+          'Planes con tarifa pero SIN columna de coberturas ('+missingCov.length+'): '+(missingCov.length?missingCov.join(', '):'ninguno');
+      }
+      alert('CALC TEST (age35, selector=$5K):\n'+calcTests+'\n\n❌ FAILED ('+failed.length+'):\n'+failed.join('\n')+'\n\n'+covInfo);
+    };
+    document.body.appendChild(dbgBtn);
+    renderHijos();
+    buildChips();
+    calcular();
+  }catch(err){
+    document.getElementById('loading-state').innerHTML=`
+      <div style="background:#fef2f2;color:#991b1b;border-radius:8px;padding:12px 14px;font-size:13px;border:.5px solid #fca5a5">
+        <strong>Error al cargar datos:</strong> ${err.message}<br>
+        <span style="font-size:11px">Verifica que el Apps Script esté implementado con acceso público.</span>
+      </div>`;
+  }
+}
+
+// ── Print ─────────────────────────────────────────────────────────────────────
+function openPrint(){
+  const tA=parseInt(document.getElementById('at').value);
+  const cA=parseInt(document.getElementById('ac').value);
+  const dedRef=parseInt(document.getElementById('dref').value);
+  const nombre=document.getElementById('nombre-cliente').value.trim();
+  const hijosValidos=hijos.filter(h=>!isNaN(h.age)&&h.age>=0);
+  const niv=NIVELES[activeNivel];
+  const activeKeys=Object.keys(active).filter(k=>active[k]);
+  const printResults=[];
+  const usedDedsAll=[]; // deducibles numéricos reales usados, para el resumen de clientBar()
+  activeKeys.forEach(k=>{
+    const p=plans[k];if(!p)return;
+    if(!planDedsSel[k]||!planDedsSel[k].length)planDedsSel[k]=[getUsedDed(p,dedRef)];
+    const seen=new Set();
+    planDedsSel[k].forEach(dv=>{
+      const r=cotizarPlan(p,tA,isNaN(cA)?NaN:cA,hijosValidos,dv,genTitular,genConyuge);
+      if(!r||(!r.annual&&!r.totalMXN))return;
+      const dedKey=r.dedUsed!=null?r.dedUsed:('x'+dv);
+      if(seen.has(dedKey))return;
+      seen.add(dedKey);
+      if(r.dedUsed!=null&&!usedDedsAll.includes(r.dedUsed))usedDedsAll.push(r.dedUsed);
+      let matWarn=null;
+      if(activeNivel==='premium'&&MAT_MAX_DED[k]&&r.dedUsed>MAT_MAX_DED[k])
+        matWarn='Ded. máx. maternidad $'+MAT_MAX_DED[k].toLocaleString()+' — ajustar deducible';
+      printResults.push({k,ck:k+'__'+dedKey,compania:p.compania,nombre:p.nombre,isMXN:p.isMXN,
+        ded:r.dedLabel,base:r.base,admin:p.admin,supl:p.supl,
+        accEndoso:r.accEndoso||0,merPlusEndoso:r.merPlusEndoso||0,members:r.members||[],annual:r.annual,
+        totalMXN:r.isMXN?r.totalMXN:Math.round(r.annual*(fx||17.5)),
+        emision:r.emision||0,best:false,matWarn});
+    });
+  });
+  if(!printResults.length){alert('Ingresa la edad del titular primero.');return;}
+  printResults.sort((a,b)=>a.totalMXN-b.totalMXN);
+  printResults[0].best=true;
+  usedDedsAll.sort((a,b)=>a-b);
+  const payload={
+    cliente:nombre||'Cliente',
+    fecha:new Date().toLocaleDateString('es-MX',{year:'numeric',month:'long',day:'numeric'}),
+    asegurados:{titular:tA,conyuge:isNaN(cA)?null:cA,hijos:hijosValidos.map(h=>h.age)},
+    nivel:niv?.label||activeNivel,
+    deducible:usedDedsAll.length===1?usedDedsAll[0]:null,
+    compareDeds:usedDedsAll,
+    fx:fx||17.5,
+    contacto:{nombre:'Seguridad Planificada',email:'ilan@seguridadplanificada.com'},
+    results:printResults,coberturas:coverages
+  };
+  try{sessionStorage.setItem('gmm_print',JSON.stringify(payload));}catch(e){}
+  window.open('cotizador_print.html','_blank');
+}
+function showPrintBtn(){
+  const tA=parseInt(document.getElementById('at').value);
+  const btn=document.getElementById('btn-print');
+  if(btn){const show=!isNaN(tA)&&tA>=18&&Object.values(active).some(Boolean);btn.style.visibility=show?'visible':'hidden';}
+}
+
+function resetForm(){
+  // Clear text inputs
+  document.getElementById('nombre-cliente').value='';
+  document.getElementById('at').value='';
+  document.getElementById('ac').value='';
+  // Clear hijos
+  hijos=[];
+  genTitular='M';genConyuge='M';
+  ['t','c'].forEach(w=>['M','F'].forEach(x=>{const b=document.getElementById('gen-'+w+'-'+x);if(b)b.classList.toggle('on',x==='M');}));
+  renderHijos();
+  // Reset nivel to alto
+  document.getElementById('nivel').value='';
+  setNivel('');
+  // Reset deducible — vuelve al placeholder sin selección
+  document.getElementById('dref').value='';
+  planDedsSel={};
+  // Reset descuentos
+  ['bupa_nn','bupa_edad','sg_nn','sg_fam'].forEach(w=>{
+    opts[w]=false;
+    document.getElementById('t'+w).classList.remove('on');
+  });
+  // Keep rb_acc on (default)
+  opts.rb_acc=true;
+  document.getElementById('trb_acc').classList.add('on');
+  // Clear results
+  document.getElementById('rarea').innerHTML='<p style="font-size:13px;color:#888;text-align:center;padding:1rem 0">Ingresa la edad del titular para ver la cotización.</p>';
+  const btnP=document.getElementById('btn-print');if(btnP)btnP.style.visibility='hidden';
+  document.getElementById('cmp-section').style.display='none';
+  planDedOverride={};
+}
+
+renderHijos();
+loadData();
+fetchFX();
+
+// PWA: registra el service worker (solo para el criterio de instalación de Android;
+// no cachea nada — las tarifas siempre se piden en vivo). Falla en silencio si el
+// hosting no sirve sw.js correctamente, sin afectar el resto del cotizador.
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  });
+}
+</script>
+</body>
+</html>
