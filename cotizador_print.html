@@ -12,6 +12,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;ba
 .btns{display:flex;gap:8px}
 .btn{padding:6px 16px;border-radius:7px;cursor:pointer;font-size:12px;font-weight:500;border:none}
 .btn-print{background:#fff;color:#1A3A5C}
+.btn-share{background:#0F6E56;color:#fff}
+.btn-share:disabled{opacity:.6;cursor:default}
 .btn-close{background:transparent;color:#ccc;border:.5px solid #555 !important;border-radius:7px}
 .sec-bar{background:#0f2a45;padding:8px 20px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .sec-lbl{color:#8aa8c8;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap}
@@ -101,11 +103,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;ba
 </head>
 <body>
 
+<!-- Generación de PDF en el navegador para el botón "Compartir" (WhatsApp/correo vía Web Share API) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
 <div class="bar">
   <span class="bar-title" id="bar-title">Cotización GMM</span>
   <div class="btns">
     <button class="btn btn-close" onclick="window.close()">✕ Cerrar</button>
     <button class="btn btn-print" onclick="window.print()">🖨 Imprimir / PDF</button>
+    <button class="btn btn-share" id="btn-share" onclick="compartirPDF()">📤 Compartir</button>
   </div>
 </div>
 
@@ -393,6 +400,69 @@ else{
     p2.innerHTML = buildPage2(sa);
     pages.appendChild(p2.firstChild);
   }
+
+  // ── Compartir PDF (WhatsApp / correo) ──────────────────────────────────
+  // Genera el PDF en el navegador (jsPDF + html2canvas, una imagen por hoja
+  // .page) y lo pasa al share sheet nativo vía Web Share API (nivel 2, con
+  // archivos) — soportado en Safari iOS 15+ y Chrome Android. En navegadores
+  // sin esa capacidad (la mayoría de escritorio) se descarga el PDF y se
+  // avisa al usuario para que lo comparta manualmente.
+  function buildFilename(){
+    const cliente = (D.cliente||'Cliente').trim().replace(/[^a-zA-Z0-9]+/g,'_').replace(/^_+|_+$/g,'')||'Cliente';
+    const fecha = new Date().toISOString().slice(0,10);
+    return 'Cotizacion_GMM_'+cliente+'_'+fecha+'.pdf';
+  }
+
+  window.compartirPDF = async function(){
+    const btn = document.getElementById('btn-share');
+    const original = btn.textContent;
+    btn.textContent = '⏳ Generando PDF…';
+    btn.disabled = true;
+    try{
+      if(!window.jspdf || !window.html2canvas){
+        throw new Error('No se pudieron cargar las librerías de PDF (revisa tu conexión) ');
+      }
+      const { jsPDF } = window.jspdf;
+      const orientation = isLS ? 'landscape' : 'portrait';
+      const pdf = new jsPDF({ unit:'mm', format:'letter', orientation });
+      const pageEls = document.querySelectorAll('#pages > .page');
+      for(let i=0;i<pageEls.length;i++){
+        const canvas = await html2canvas(pageEls[i], { scale:2, useCORS:true, backgroundColor:'#ffffff' });
+        const imgData = canvas.toDataURL('image/jpeg', 0.95);
+        const pageW = pdf.internal.pageSize.getWidth();
+        const pageH = pdf.internal.pageSize.getHeight();
+        const imgW = pageW;
+        const imgH = Math.min(canvas.height*(imgW/canvas.width), pageH);
+        if(i>0) pdf.addPage('letter', orientation);
+        pdf.addImage(imgData, 'JPEG', 0, 0, imgW, imgH);
+      }
+      const filename = buildFilename();
+      const blob = pdf.output('blob');
+      const file = new File([blob], filename, { type:'application/pdf' });
+      if(navigator.canShare && navigator.canShare({ files:[file] })){
+        await navigator.share({
+          files: [file],
+          title: 'Cotización GMM',
+          text: 'Cotización de Gastos Médicos Mayores' + (D.cliente?' — '+D.cliente:'')
+        });
+      } else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = filename;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        alert('Tu navegador no soporta compartir directo. Se descargó el PDF — compártelo manualmente por WhatsApp o correo.');
+      }
+    }catch(err){
+      if(err && err.name!=='AbortError'){ // AbortError = el usuario cerró el share sheet, no es un error real
+        console.error(err);
+        alert('No se pudo generar/compartir el PDF: '+(err.message||err));
+      }
+    }finally{
+      btn.textContent = original;
+      btn.disabled = false;
+    }
+  };
 }
 </script>
 </body>

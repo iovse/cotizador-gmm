@@ -68,7 +68,7 @@ input:focus,select:focus{outline:none;border-color:#888}
 
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:8px">
   <div>
-    <p style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#888;margin:0 0 2px">Cotizador GMM · 2026 · v28</p>
+    <p style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#888;margin:0 0 2px">Cotizador GMM · 2026 · v29</p>
     <p style="font-size:20px;font-weight:500;margin:0" id="title-plans">Cargando planes...</p>
   </div>
   <div style="display:flex;align-items:center;gap:12px">
@@ -1070,7 +1070,9 @@ async function fetchFX(){
 
 async function loadData(){
   try{
-    const resp=await fetch(APPS_URL);
+    const forceRefresh=new URLSearchParams(location.search).get('refresh')==='1';
+    const dataUrl=forceRefresh?APPS_URL+'?refresh=1':APPS_URL;
+    const resp=await fetch(dataUrl);
     if(!resp.ok)throw new Error('HTTP '+resp.status);
     const raw=await resp.json();
     let count=0;
@@ -1097,6 +1099,12 @@ async function loadData(){
     document.getElementById('loading-state').style.display='none';
     document.getElementById('main-ui').style.display='block';
     document.getElementById('title-plans').textContent=count+' planes cargados';
+    if(forceRefresh){
+      const banner=document.createElement('div');
+      banner.textContent='✅ Tarifas releídas del Sheet (caché reiniciado)';
+      banner.style.cssText='background:#0F6E56;color:#fff;font-size:12px;padding:6px 12px;border-radius:8px;margin-bottom:10px;display:inline-block';
+      document.getElementById('main-ui').prepend(banner);
+    }
     // Debug button — shows which plans loaded/failed
     const dbgBtn=document.createElement('button');
     dbgBtn.textContent='🔍 Debug planes';
