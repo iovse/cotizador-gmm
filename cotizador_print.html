@@ -2,7 +2,6 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Cotización GMM</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -13,7 +12,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;ba
 .btn{padding:6px 16px;border-radius:7px;cursor:pointer;font-size:12px;font-weight:500;border:none}
 .btn-print{background:#fff;color:#1A3A5C}
 .btn-share{background:#0F6E56;color:#fff}
-.btn-share:disabled{opacity:.6;cursor:default}
+.btn-share[disabled]{opacity:.6;cursor:default}
 .btn-close{background:transparent;color:#ccc;border:.5px solid #555 !important;border-radius:7px}
 .sec-bar{background:#0f2a45;padding:8px 20px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .sec-lbl{color:#8aa8c8;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap}
@@ -100,19 +99,17 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;ba
   .page.ls{page:landscape}
 }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
-
-<!-- Generación de PDF en el navegador para el botón "Compartir" (WhatsApp/correo vía Web Share API) -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
 <div class="bar">
   <span class="bar-title" id="bar-title">Cotización GMM</span>
   <div class="btns">
     <button class="btn btn-close" onclick="window.close()">✕ Cerrar</button>
+    <button class="btn btn-share" id="btn-share" onclick="shareOrDownloadPDF()">📤 Compartir</button>
     <button class="btn btn-print" onclick="window.print()">🖨 Imprimir / PDF</button>
-    <button class="btn btn-share" id="btn-share" onclick="compartirPDF()">📤 Compartir</button>
   </div>
 </div>
 
@@ -124,7 +121,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;ba
 <div id="pages"></div>
 
 <script>
-const raw = sessionStorage.getItem('gmm_print');
+const raw = (window.__GMM_PAYLOAD__!=null)?JSON.stringify(window.__GMM_PAYLOAD__):(window.sessionStorage?sessionStorage.getItem('gmm_print'):null);
 if(!raw){document.getElementById('pages').innerHTML='<p style="padding:2rem;color:#888;text-align:center">No hay datos de cotización. Abre esta página desde el cotizador.</p>';}
 else{
   const D = JSON.parse(raw);
@@ -159,7 +156,26 @@ else{
     'BD-ELITE':'#534AB7','BD-PREM':'#0F6E56','BD-GLOBAL':'#185FA5','BD-SEL':'#993556',
     'SUREGO-PROT':'#1A237E','SUREGO-ASS':'#1565C0','SUREGO-CHO':'#00838F',
     'BUPA-ELITE':'#003087','BUPA-PREM':'#003087','BUPA-SEL':'#003087',
-    'VUMI-ABS':'#A32D2D','VUMI-UNI':'#185FA5','VUMI-SPEC':'#854F0B'};
+    'VUMI-ABS':'#A32D2D','VUMI-UNI':'#185FA5','VUMI-SPEC':'#854F0B',
+    'EVER-EVE':'#444441','EVER-EWH':'#444441'};
+
+  function planKeyToCompany(k){
+    if(/^RB-/.test(k))return'Redbridge';
+    if(/^BMI-/.test(k))return'BMI';
+    if(/^BD-/.test(k))return'BestDoctors';
+    if(/^BUPA-/.test(k))return'BUPA';
+    if(/^SUREGO-/.test(k))return'SUREGO';
+    if(/^VUMI-/.test(k))return'VUMI';
+    if(/^PA-/.test(k))return'PanAmerican Life';
+    if(/^EVER-/.test(k))return'Ever';
+    return'';
+  }
+  function logoImg(co,h,mw,onDark){
+    const src=D.logos&&D.logos[co];
+    if(!src)return'<span style="font-size:8px;opacity:.8">'+co+'</span>';
+    const img='<img src="'+src+'" alt="'+co+'" style="height:'+(h||14)+'px;max-width:'+(mw||60)+'px;object-fit:contain">';
+    return onDark?('<div style="background:rgba(255,255,255,.9);border-radius:3px;padding:1px 5px;display:inline-flex;align-items:center;">'+img+'</div>'):img;
+  }
 
   function fM(n){return'$'+Math.round(n).toLocaleString('es-MX')+' MXN';}
   function fU(n){return'USD '+Math.round(n).toLocaleString('es-MX');}
@@ -264,7 +280,7 @@ else{
           '<td colspan="2"><div class="mb-wrap"><span class="mb-title">Desglose de prima por integrante</span>'+items+'</div></td></tr>';
       }
       rows += '<tr style="background:'+(best?'#f0faf5':(i%2?'#fafaf9':'#fff'))+'">'+
-        '<td><span class="plan-co">'+r.compania+'</span>'+
+        '<td><div style="margin-bottom:3px">'+ logoImg(planKeyToCompany(r.k),13,60) +'</div>'+
         '<span class="plan-name">'+r.nombre+(best?'<span class="badge">✓ Mejor precio</span>':'')+'</span>'+
         '<span class="plan-ded">Deducible: '+r.ded+'</span>'+
         (r.matWarn?'<span class="warn-mat">⚠ '+r.matWarn+'</span>':'')+
@@ -307,7 +323,8 @@ else{
     const minTotal = comboCols.length ? Math.min(...comboCols.map(r=>r.totalMXN||Infinity)) : Infinity;
     const planNameRow = groups.map(g=>{
       const c = PCOL[g.k]||'#1A3A5C';
-      return '<th class="ph" colspan="'+g.items.length+'" style="background:'+c+'"><span class="ph-name">'+g.nombre+'</span></th>';
+      const co=planKeyToCompany(g.k);
+      return '<th class="ph" colspan="'+g.items.length+'" style="background:'+c+'">'+ logoImg(co,13,58,true) +'<span class="ph-name">'+g.nombre+'</span></th>';
     }).join('');
     const dedPriceRow = groups.map(g=>{
       const c = PCOL[g.k]||'#1A3A5C';
@@ -384,6 +401,60 @@ else{
     else pages.appendChild(newP2.firstChild);
   }
 
+  // ── Compartir (genera PDF y abre el menú nativo de compartir) ──────────
+  async function generatePDF(){
+    const { jsPDF } = window.jspdf;
+    const pageEls = Array.from(document.querySelectorAll('#pages > .page'));
+    const bar = document.querySelector('.bar');
+    const secBar = document.getElementById('sec-bar');
+    const prevBar = bar.style.display, prevSec = secBar.style.display;
+    bar.style.display = 'none';
+    secBar.style.display = 'none';
+    let pdf = null;
+    try{
+      for(let i=0;i<pageEls.length;i++){
+        const canvas = await html2canvas(pageEls[i], {scale:2, backgroundColor:'#ffffff', useCORS:true});
+        const imgData = canvas.toDataURL('image/jpeg', 0.92);
+        const w = canvas.width, h = canvas.height;
+        if(!pdf) pdf = new jsPDF({orientation: w>h?'landscape':'portrait', unit:'px', format:[w,h]});
+        else pdf.addPage([w,h], w>h?'landscape':'portrait');
+        pdf.addImage(imgData, 'JPEG', 0, 0, w, h);
+      }
+    } finally {
+      bar.style.display = prevBar;
+      secBar.style.display = prevSec;
+    }
+    return pdf.output('blob');
+  }
+
+  async function shareOrDownloadPDF(){
+    const btn = document.getElementById('btn-share');
+    const orig = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Generando…';
+    try{
+      const blob = await generatePDF();
+      const safeName = (D.cliente||'Cotizacion GMM').replace(/[^a-zA-Z0-9]+/g,'_');
+      const fileName = 'Cotizacion_'+safeName+'.pdf';
+      const file = new File([blob], fileName, {type:'application/pdf'});
+      if(navigator.canShare && navigator.canShare({files:[file]})){
+        await navigator.share({files:[file], title:'Cotización GMM', text:'Cotización de Gastos Médicos Mayores — '+(D.cliente||'')});
+      } else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = fileName;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(()=>URL.revokeObjectURL(url), 5000);
+      }
+    }catch(e){
+      if(e && e.name !== 'AbortError') alert('No se pudo generar o compartir el PDF: '+(e.message||e));
+    }finally{
+      btn.disabled = false;
+      btn.innerHTML = orig;
+    }
+  }
+  window.shareOrDownloadPDF = shareOrDownloadPDF;
+
   // ── Render ────────────────────────────────────────────────────────────
   document.getElementById('bar-title').textContent = D.cliente+' · '+D.fecha;
 
@@ -400,69 +471,6 @@ else{
     p2.innerHTML = buildPage2(sa);
     pages.appendChild(p2.firstChild);
   }
-
-  // ── Compartir PDF (WhatsApp / correo) ──────────────────────────────────
-  // Genera el PDF en el navegador (jsPDF + html2canvas, una imagen por hoja
-  // .page) y lo pasa al share sheet nativo vía Web Share API (nivel 2, con
-  // archivos) — soportado en Safari iOS 15+ y Chrome Android. En navegadores
-  // sin esa capacidad (la mayoría de escritorio) se descarga el PDF y se
-  // avisa al usuario para que lo comparta manualmente.
-  function buildFilename(){
-    const cliente = (D.cliente||'Cliente').trim().replace(/[^a-zA-Z0-9]+/g,'_').replace(/^_+|_+$/g,'')||'Cliente';
-    const fecha = new Date().toISOString().slice(0,10);
-    return 'Cotizacion_GMM_'+cliente+'_'+fecha+'.pdf';
-  }
-
-  window.compartirPDF = async function(){
-    const btn = document.getElementById('btn-share');
-    const original = btn.textContent;
-    btn.textContent = '⏳ Generando PDF…';
-    btn.disabled = true;
-    try{
-      if(!window.jspdf || !window.html2canvas){
-        throw new Error('No se pudieron cargar las librerías de PDF (revisa tu conexión) ');
-      }
-      const { jsPDF } = window.jspdf;
-      const orientation = isLS ? 'landscape' : 'portrait';
-      const pdf = new jsPDF({ unit:'mm', format:'letter', orientation });
-      const pageEls = document.querySelectorAll('#pages > .page');
-      for(let i=0;i<pageEls.length;i++){
-        const canvas = await html2canvas(pageEls[i], { scale:2, useCORS:true, backgroundColor:'#ffffff' });
-        const imgData = canvas.toDataURL('image/jpeg', 0.95);
-        const pageW = pdf.internal.pageSize.getWidth();
-        const pageH = pdf.internal.pageSize.getHeight();
-        const imgW = pageW;
-        const imgH = Math.min(canvas.height*(imgW/canvas.width), pageH);
-        if(i>0) pdf.addPage('letter', orientation);
-        pdf.addImage(imgData, 'JPEG', 0, 0, imgW, imgH);
-      }
-      const filename = buildFilename();
-      const blob = pdf.output('blob');
-      const file = new File([blob], filename, { type:'application/pdf' });
-      if(navigator.canShare && navigator.canShare({ files:[file] })){
-        await navigator.share({
-          files: [file],
-          title: 'Cotización GMM',
-          text: 'Cotización de Gastos Médicos Mayores' + (D.cliente?' — '+D.cliente:'')
-        });
-      } else {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url; a.download = filename;
-        document.body.appendChild(a); a.click(); document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        alert('Tu navegador no soporta compartir directo. Se descargó el PDF — compártelo manualmente por WhatsApp o correo.');
-      }
-    }catch(err){
-      if(err && err.name!=='AbortError'){ // AbortError = el usuario cerró el share sheet, no es un error real
-        console.error(err);
-        alert('No se pudo generar/compartir el PDF: '+(err.message||err));
-      }
-    }finally{
-      btn.textContent = original;
-      btn.disabled = false;
-    }
-  };
 }
 </script>
 </body>
