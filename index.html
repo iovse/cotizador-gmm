@@ -550,12 +550,23 @@ function parseSheet(rows){
     deds.push({label,value:parsed.value,isCombined:parsed.isCombined,secondValue:parsed.secondValue||null,col:c});
   }
   if(!deds.length)return null;
-  const ageData={},children={};
+  const ageData={},children={},ageDataChildren={};
   let lastAgeNum=null;
+  // RB-ULTRA/PRIME/MAX/SPEC tienen, DESPUÉS de la tabla de adultos, una segunda
+  // tabla "Hijos (0-23 años) cotizan con tarifa individual por edad" con tarifas
+  // MÁS BAJAS para edades 0-23 — que se TRASLAPAN con edades 18-23 de la tabla de
+  // adultos. Sin esta bandera, esas filas de hijos sobreescriben en ageData la
+  // tarifa correcta de un titular/cónyuge de 18-23 años con la tarifa de hijo
+  // (bug reportado 2026-07-18). A partir del renglón "NOTA...Hijos...", todo lo
+  // que sigue se guarda aparte en ageDataChildren y ya no toca ageData.
+  let inChildTable=false;
   for(let r=10;r<rows.length;r++){
     const row=rows[r];
     if(!row)continue;
     const lbl=row[0]!==null&&row[0]!==''&&row[0]!==undefined?String(row[0]).trim():'';
+    // Marcador de inicio de la tabla de hijos individuales (RB): todo lo que
+    // sigue va a ageDataChildren, nunca a ageData.
+    if(/nota/i.test(lbl)&&/hijo/i.test(lbl)){ inChildTable=true; lastAgeNum=null; continue; }
     // Skip section headers like "HIJOS POR GRUPO"
     if(lbl.toLowerCase().includes('hijo')&&lbl.toLowerCase().includes('grupo'))continue;
     // Children rows: "1 Hijo", "2 Hijos", "3+ Hijos"
@@ -584,15 +595,16 @@ function parseSheet(rows){
       } else {
         key=ageNum;
       }
-      ageData[key]={};
-      deds.forEach(d=>{const v=row[d.col];if(v!=null&&v!==''&&!isNaN(Number(v)))ageData[key][d.value]=Math.round(Number(v));});
+      const target=inChildTable?ageDataChildren:ageData;
+      target[key]={};
+      deds.forEach(d=>{const v=row[d.col];if(v!=null&&v!==''&&!isNaN(Number(v)))target[key][d.value]=Math.round(Number(v));});
     }
   }
   const admin=meta['ADMIN (USD)']?Math.round(Number(meta['ADMIN (USD)'])):0;
   const supl=meta['SUPL (USD)']?Math.round(Number(meta['SUPL (USD)'])):0;
   return{clave:String(meta['CLAVE']).trim(),compania:meta['COMPAÑIA']||'',nombre:meta['NOMBRE COMPLETO']||'',
     moneda:String(meta['MONEDA']||'USD').trim(),nivel:meta['NIVEL']||'',
-    admin:isNaN(admin)?0:admin,supl:isNaN(supl)?0:supl,deds,ageData,children,
+    admin:isNaN(admin)?0:admin,supl:isNaN(supl)?0:supl,deds,ageData,children,ageDataChildren,
     isMXN:String(meta['MONEDA']||'').trim().toUpperCase()==='MXN'};
 }
 
@@ -674,8 +686,21 @@ function getUsedDed(plan,dedRef){
   if(avail.includes(dedRef))return dedRef;
   return avail.reduce((a,b)=>Math.abs(b-dedRef)<Math.abs(a-dedRef)?b:a);
 }
-function getAgeVal(plan,age,ded,gen){
+function getAgeVal(plan,age,ded,gen,useChildTable){
   const a=Math.min(age,84);
+  // Hijos individuales de RB (0-23 años): usar la tabla separada ageDataChildren
+  // si existe (evita usar por error la tarifa de adulto o viceversa — ver NOTA
+  // en parseSheet). Planes que no tienen tabla de hijos separada (ej. BD) caen
+  // directo al lookup estándar de abajo, igual que siempre.
+  if(useChildTable&&plan.ageDataChildren&&Object.keys(plan.ageDataChildren).length){
+    if(plan.ageDataChildren[a]!==undefined&&plan.ageDataChildren[a][ded]!=null)return plan.ageDataChildren[a][ded];
+    const cAges=Object.keys(plan.ageDataChildren).map(Number).sort((x,y)=>x-y);
+    if(cAges.length){
+      const maxCA=cAges[cAges.length-1];
+      if(a>maxCA)return plan.ageDataChildren[maxCA]?.[ded]||null;
+    }
+    return null;
+  }
   // Try gender-specific key first (BUPA Nacional)
   if(gen){
     const gkey=a+'_'+gen;
@@ -783,7 +808,7 @@ function cotizarPlan(plan,tA,cA,hijosArr,dedRef,gT,gC){
         if(v){base+=v;members.push({role:'Hijo adulto '+(hi+1),age:h.age,gen:h.gen||'M',base:v,acc:0});}
       });
     } else if(isInd){
-      hijosArr.forEach((h,hi)=>{if(isNaN(h.age)||h.age<0)return;const v=getAgeVal(plan,Math.min(h.age,23),usedDed);if(v){base+=v;members.push({role:'Hijo '+(hi+1),age:h.age,gen:h.gen||'M',base:v,acc:0});}});
+      hijosArr.forEach((h,hi)=>{if(isNaN(h.age)||h.age<0)return;const v=getAgeVal(plan,Math.min(h.age,23),usedDed,null,true);if(v){base+=v;members.push({role:'Hijo '+(hi+1),age:h.age,gen:h.gen||'M',base:v,acc:0});}});
     } else {
       const g=Math.min(hijosArr.length,3);const cv=plan.children[g]?.[usedDed];if(cv){base+=cv;members.push({role:hijosArr.length>1?('Hijos ('+hijosArr.length+')'):'Hijo',grouped:true,count:hijosArr.length,base:cv,acc:0});}
     }
