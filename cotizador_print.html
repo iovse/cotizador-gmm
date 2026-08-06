@@ -275,7 +275,7 @@ else{
           const ageTxt=(typeof m.age==='number')?(' · '+m.age+' años'):'';
           return '<div class="mb-row"><span class="mb-role">'+m.role+ageTxt+'</span>'+
                  '<span class="mb-val">'+fmt(m.base)+(extras.length?' <span class="mb-x">+ '+extras.join(' + ')+'</span>':'')+'</span></div>';
-        }).join('');
+        }).join('') + (r.supl>0 ? '<div class="mb-row"><span class="mb-role">End. Medicamentos</span><span class="mb-val">'+fU(r.supl)+'</span></div>' : '');
         memHTML='<tr class="mb-tr" style="background:'+(best?'#f0faf5':(i%2?'#fafaf9':'#fff'))+'">'+
           '<td colspan="2"><div class="mb-wrap"><span class="mb-title">Desglose de prima por integrante</span>'+items+'</div></td></tr>';
       }
