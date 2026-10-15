@@ -270,14 +270,15 @@ else{
         const fmt = r.isMXN ? fM : fU;
         const items=r.members.map(m=>{
           const extras=[];
-          if(m.acc>0)extras.push('end. acc. '+fU(m.acc));
+          if(m.acc>0)extras.push((m.accLbl||'end. acc.')+' '+fU(m.acc));
           if(m.endoso>0)extras.push('end. Plus '+fU(m.endoso));
           const ageTxt=(typeof m.age==='number')?(' · '+m.age+' años'):'';
           return '<div class="mb-row"><span class="mb-role">'+m.role+ageTxt+'</span>'+
                  '<span class="mb-val">'+fmt(m.base)+(extras.length?' <span class="mb-x">+ '+extras.join(' + ')+'</span>':'')+'</span></div>';
-        }).join('') + (r.supl>0 ? '<div class="mb-row"><span class="mb-role">End. Medicamentos</span><span class="mb-val">'+fU(r.supl)+'</span></div>' : '');
+        }).join('');
+        const bmiAccRow=(r.bmiAccEndoso>0)?('<div class=mb-row><span class=mb-role>Endoso Exoneración de Deducible por Accidente (BMI) · total</span><span class=mb-val>'+fU(r.bmiAccEndoso)+'</span></div>'):'';
         memHTML='<tr class="mb-tr" style="background:'+(best?'#f0faf5':(i%2?'#fafaf9':'#fff'))+'">'+
-          '<td colspan="2"><div class="mb-wrap"><span class="mb-title">Desglose de prima por integrante</span>'+items+'</div></td></tr>';
+          '<td colspan="2"><div class="mb-wrap"><span class="mb-title">Desglose de prima por integrante</span>'+items+bmiAccRow+'</div></td></tr>';
       }
       rows += '<tr style="background:'+(best?'#f0faf5':(i%2?'#fafaf9':'#fff'))+'">'+
         '<td><div style="margin-bottom:3px">'+ logoImg(planKeyToCompany(r.k),13,60) +'</div>'+
