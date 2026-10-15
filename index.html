@@ -167,7 +167,7 @@ input:focus,select:focus{outline:none;border-color:#888}
 <div class="card">
   <p class="sl">Descuentos</p>
   <div class="or" style="border-top:none;padding-top:0">
-    <div><p style="font-size:13px;font-weight:500;margin:0">Nuevo negocio BUPA <span style="font-size:11px;font-weight:400;color:#888">10% sobre prima base</span></p></div>
+    <div><p style="font-size:13px;font-weight:500;margin:0">Nuevo negocio BUPA <span style="font-size:11px;font-weight:400;color:#888">15% sobre prima base</span></p></div>
     <button class="tgl" id="tbupa_nn" onclick="toggleOpt('bupa_nn')"></button>
   </div>
   <div class="or">
@@ -849,7 +849,7 @@ function cotizarPlan(plan,tA,cA,hijosArr,dedRef,gT,gC){
     const isBUPAnac=NAC_PLANES.includes(plan.clave);
     // Descuentos "Nuevo negocio BUPA" y "Descuento edad BUPA" solo aplican a
     // Elite/Premier/Select (BUPA Internacional) — BUPA Nacional NO los recibe.
-    if(plan.compania==='BUPA'&&!isBUPAnac){let d=0;if(opts.bupa_nn)d+=.10;if(opts.bupa_edad){const tOk=tA>=5&&tA<=50;const cOk=isNaN(cA)||cA<18||(cA>=5&&cA<=50);if(tOk&&cOk)d+=.05;}if(d>0)bMXN=Math.round(bMXN*(1-d));}
+    if(plan.compania==='BUPA'&&!isBUPAnac){let d=0;if(opts.bupa_nn)d+=.15;if(opts.bupa_edad){const tOk=tA>=5&&tA<=50;const cOk=isNaN(cA)||cA<18||(cA>=5&&cA<=50);if(tOk&&cOk)d+=.05;}if(d>0)bMXN=Math.round(bMXN*(1-d));}
     if(plan.compania==='SUREGO'){let dsg=0;if(opts.sg_nn)dsg+=.10;if(opts.sg_fam)dsg+=.05;if(dsg>0)bMXN=Math.round(bMXN*(1-dsg));}
     // Cargo obligatorio BUPA Internacional: $625 MXN por asegurado (titular + cónyuge si aplica)
     // Se suma a la prima neta antes de descuentos y emisión
