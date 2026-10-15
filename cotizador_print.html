@@ -98,6 +98,25 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;ba
   .nota{background:#fffbeb!important;border-color:#fde68a!important}
   .page.ls{page:landscape}
 }
+
+.rz-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:6px}
+.rz{border:.5px solid #d4d4d0;border-radius:8px;overflow:hidden;break-inside:avoid;page-break-inside:avoid;background:#fff}
+.rz.best{border-width:1.5px}
+.rz-hd{display:flex;justify-content:space-between;align-items:flex-start;gap:6px;padding:6px 8px;border-bottom:.5px solid #e5e5e3;min-height:38px}
+.rz-nm{font-size:10.5px;font-weight:700;margin:2px 0 0;line-height:1.2}
+.rz-b{font-size:7.5px;font-weight:700;color:#0F6E56;background:#E1F5EE;border-radius:8px;padding:1px 6px;white-space:nowrap}
+.rz-q{padding:6px 8px;border-top:.5px solid #f0f0ee}
+.rz-q:first-of-type{border-top:none}
+.rz-fp{font-size:8px;color:#888;margin:0}
+.rz-dd{font-size:9.5px;font-weight:700;color:#1A3A5C;margin:1px 0 0;text-decoration:underline;text-decoration-thickness:0.6px;text-decoration-color:#8FD3F5;text-underline-offset:2px}
+.rz-am{font-size:15px;font-weight:700;margin:2px 0 0;white-space:nowrap}
+.rz-us{font-size:8px;color:#999;margin:0}
+.rz-w{font-size:7.5px;color:#92400e;background:#fffbeb;border-radius:4px;padding:2px 4px;margin-top:3px}
+.rz-des{margin-top:5px;padding-top:4px;border-top:.5px dashed #e5e5e3}
+.rz-dt{font-size:7px;color:#888;text-transform:uppercase;letter-spacing:.05em;margin:0 0 2px}
+.rz-mr{display:flex;justify-content:space-between;gap:6px;font-size:8px;color:#444;line-height:1.45}
+.rz-mx{font-size:7px;color:#888;text-align:right;margin-top:-1px}
+.rz-tot{font-weight:700;color:#1A3A5C;border-top:.5px solid #f0f0ee;margin-top:2px;padding-top:1px}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -125,7 +144,8 @@ const raw = (window.__GMM_PAYLOAD__!=null)?JSON.stringify(window.__GMM_PAYLOAD__
 if(!raw){document.getElementById('pages').innerHTML='<p style="padding:2rem;color:#888;text-align:center">No hay datos de cotización. Abre esta página desde el cotizador.</p>';}
 else{
   const D = JSON.parse(raw);
-  const isLS = D.results.length > 3;
+  const MODE = D.mode||'ambos'; // 'resumen' | 'comparativo' | 'ambos'
+  const isLS = MODE!=='resumen' && D.results.length > 3;
 
   // Inject correct @page orientation for PDF
   const printStyleEl = document.createElement('style');
@@ -229,7 +249,7 @@ else{
 
   function hdr(){
     return'<div class="hdr">'+logoHTML+
-      '<div class="hdr-r"><p class="hdr-title">Cotización de Gastos Médicos Mayores</p>'+
+      '<div class="hdr-r"><p class="hdr-title">'+(MODE==='comparativo'?'Comparativo de Coberturas · Gastos Médicos Mayores':'Cotización de Gastos Médicos Mayores')+'</p>'+
       '<p class="hdr-sub">Fecha: '+D.fecha+' · Vigencia de tarifas: 2026</p></div></div>';
   }
 
@@ -254,7 +274,8 @@ else{
 
   const PS = 'page'+(isLS?' ls':'');
   const hasCov = allSecs.length>0 && covKeys.length>0;
-  const totalPg = hasCov ? 2 : 1;
+  const totalPg = (MODE==='ambos'&&hasCov) ? 2 : 1;
+  const P2N = MODE==='comparativo' ? 1 : 2;
 
   // ── Page 1: Primas ────────────────────────────────────────────────────
   function buildPage1(){
@@ -276,9 +297,9 @@ else{
           return '<div class="mb-row"><span class="mb-role">'+m.role+ageTxt+'</span>'+
                  '<span class="mb-val">'+fmt(m.base)+(extras.length?' <span class="mb-x">+ '+extras.join(' + ')+'</span>':'')+'</span></div>';
         }).join('');
-        const bmiAccRow=(r.bmiAccEndoso>0)?('<div class=mb-row><span class=mb-role>Endoso Exoneración de Deducible por Accidente (BMI) · total</span><span class=mb-val>'+fU(r.bmiAccEndoso)+'</span></div>'):'';
+        const bmiAccRow=(r.bmiAccEndoso>0)?('<div class=mb-row><span class=mb-role>Endoso Exoneración de Deducible por Accidente (BMI) · total</span><span class=mb-val>'+fU(r.bmiAccEndoso)+'</span></div>'):'';const rbAccRow=(r.accEndoso>0)?('<div class=mb-row><span class=mb-role>Endoso de Accidentes (Redbridge) · total</span><span class=mb-val>'+fU(r.accEndoso)+'</span></div>'):'';
         memHTML='<tr class="mb-tr" style="background:'+(best?'#f0faf5':(i%2?'#fafaf9':'#fff'))+'">'+
-          '<td colspan="2"><div class="mb-wrap"><span class="mb-title">Desglose de prima por integrante</span>'+items+bmiAccRow+'</div></td></tr>';
+          '<td colspan="2"><div class="mb-wrap"><span class="mb-title">Desglose de prima por integrante</span>'+items+bmiAccRow+rbAccRow+'</div></td></tr>';
       }
       rows += '<tr style="background:'+(best?'#f0faf5':(i%2?'#fafaf9':'#fff'))+'">'+
         '<td><div style="margin-bottom:3px">'+ logoImg(planKeyToCompany(r.k),13,60) +'</div>'+
@@ -310,7 +331,7 @@ else{
       return'<div class="'+PS+'">'+hdr()+clientBar()+
         '<div class="sec-title">Comparativo de coberturas</div>'+
         '<p style="font-size:10px;color:#888;padding:2rem;text-align:center">Selecciona secciones arriba o captura coberturas en Google Sheets.</p>'+
-        foot(2,totalPg)+'</div>';
+        foot(P2N,totalPg)+'</div>';
     }
     // Agrupar columnas por plan (varias columnas = varios deducibles del mismo plan)
     // para no repetir el desglose de coberturas por cada deducible.
@@ -371,7 +392,40 @@ else{
       '<div class="sec-title">Comparativo de coberturas — '+secsArr.join(' · ')+'</div>'+
       '<table class="ct"><thead><tr><th class="cl2" rowspan="2">Cobertura</th>'+planNameRow+'</tr><tr>'+dedPriceRow+'</tr></thead>'+
       '<tbody>'+rows+'</tbody></table>'+
-      foot(2,totalPg)+'</div>';
+      foot(P2N,totalPg)+'</div>';
+  }
+
+
+  // ── Resumen: un cuadro por cotización (plan + deducible), ordenados por costo ──
+  function buildResumen(){
+    const items=D.results.slice().sort((a,b)=>(a.totalMXN||0)-(b.totalMXN||0));
+    let tiles='';
+    items.forEach((r,i)=>{
+      const c=PCOL[r.k]||'#1A3A5C';
+      const isBest=i===0;
+      const fmt=r.isMXN?fM:fU;
+      const usd=r.isMXN?(D.fx?fU((r.totalMXN||0)/D.fx):''):fU(r.annual||0);
+      let des='';
+      (r.members||[]).forEach(m=>{
+        const ex=[];
+        if(m.acc>0)ex.push((m.accLbl||'end. acc.')+' '+fU(m.acc));
+        if(m.endoso>0)ex.push('end. Plus '+fU(m.endoso));
+        des+='<div class="rz-mr"><span>'+m.role+(typeof m.age==='number'?' · '+m.age+' años':'')+'</span><span>'+fmt(m.base)+'</span></div>'+(ex.length?'<div class="rz-mx">+ '+ex.join(' + ')+'</div>':'');
+      });
+      if(r.bmiAccEndoso>0)des+='<div class="rz-mr rz-tot"><span>End. exoneración deducible (BMI)</span><span>'+fU(r.bmiAccEndoso)+'</span></div>';
+      if(r.accEndoso>0)des+='<div class="rz-mr rz-tot"><span>End. accidentes (Redbridge)</span><span>'+fU(r.accEndoso)+'</span></div>';
+      tiles+='<div class="rz'+(isBest?' best':'')+'" style="'+(isBest?'border-color:'+c:'')+'">'+
+        '<div class="rz-hd"><div>'+logoImg(planKeyToCompany(r.k),12,56)+'<p class="rz-nm" style="color:'+c+'">'+r.nombre+'</p></div>'+
+        (isBest?'<span class="rz-b">✓ Mejor precio</span>':'')+'</div>'+
+        '<div class="rz-q"><p class="rz-fp">Prima anual</p><p class="rz-dd">Ded. '+(r.dedTxt||r.ded)+'</p>'+
+        '<p class="rz-am" style="color:'+c+'">'+fM(r.totalMXN||0)+'</p><p class="rz-us">'+usd+'</p>'+
+        (r.matWarn?'<p class="rz-w">⚠ '+r.matWarn+'</p>':'')+
+        (des?'<div class="rz-des"><p class="rz-dt">Desglose por integrante</p>'+des+'</div>':'')+'</div></div>';
+    });
+    return '<div class="'+PS+'">'+hdr()+clientBar()+
+      '<div class="sec-title">Primas propuestas</div><div class="rz-grid">'+tiles+'</div>'+
+      '<div class="nota">Primas en pesos con TC FIX Banxico ($'+D.fx.toFixed(2)+' MXN/USD). Planes BUPA y SUREGO incluyen emisión e IVA 16%. Para planes en USD el equivalente MXN es referencial.</div>'+
+      foot(1,1)+'</div>';
   }
 
   // ── Section chips ──────────────────────────────────────────────────────
@@ -395,7 +449,7 @@ else{
   function refreshPage2(){
     const sa = allSecs.filter(s=>selSecs.has(s)&&D.coberturas.sections[s]&&D.coberturas.sections[s].length);
     const pages = document.getElementById('pages');
-    const p2 = pages.children[1];
+    const p2 = pages.children[MODE==='comparativo'?0:1];
     const newP2 = document.createElement('div');
     newP2.innerHTML = buildPage2(sa);
     if(p2) pages.replaceChild(newP2.firstChild, p2);
@@ -436,7 +490,7 @@ else{
     try{
       const blob = await generatePDF();
       const safeName = (D.cliente||'Cotizacion GMM').replace(/[^a-zA-Z0-9]+/g,'_');
-      const fileName = 'Cotizacion_'+safeName+'.pdf';
+      const fileName = (MODE==='comparativo'?'Comparativo_':(MODE==='resumen'?'Resumen_':'Cotizacion_'))+safeName+'.pdf';
       const file = new File([blob], fileName, {type:'application/pdf'});
       if(navigator.canShare && navigator.canShare({files:[file]})){
         await navigator.share({files:[file], title:'Cotización GMM', text:'Cotización de Gastos Médicos Mayores — '+(D.cliente||'')});
@@ -457,14 +511,16 @@ else{
   window.shareOrDownloadPDF = shareOrDownloadPDF;
 
   // ── Render ────────────────────────────────────────────────────────────
-  document.getElementById('bar-title').textContent = D.cliente+' · '+D.fecha;
+  document.getElementById('bar-title').textContent = (MODE==='comparativo'?'Comparativo · ':(MODE==='resumen'?'Resumen · ':''))+D.cliente+' · '+D.fecha;
 
   const pages = document.getElementById('pages');
-  const p1 = document.createElement('div');
-  p1.innerHTML = buildPage1();
-  pages.appendChild(p1.firstChild);
+  if(MODE!=='comparativo'){
+    const p1 = document.createElement('div');
+    p1.innerHTML = MODE==='resumen' ? buildResumen() : buildPage1();
+    pages.appendChild(p1.firstChild);
+  }
 
-  if(hasCov){
+  if(hasCov && MODE!=='resumen'){
     document.getElementById('sec-bar').style.display = 'flex';
     buildChips();
     const sa = allSecs.filter(s=>D.coberturas.sections[s]&&D.coberturas.sections[s].length);
