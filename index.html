@@ -29,6 +29,30 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .ded-row{padding:4px 13px 6px;font-size:11px;color:#888;display:flex;gap:4px;flex-wrap:wrap;border-top:.5px solid #f0f0ee;align-items:center}
 .ded-pill{background:#f0f0ee;border-radius:4px;padding:2px 7px;font-size:10px;cursor:pointer;white-space:nowrap;border:none}
 .ded-pill.sel{background:#1A3A5C;color:#fff}
+/* Mosaico de cotizaciones */
+.mz-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(280px,100%),1fr));gap:10px}
+.mz{background:#fff;border:.5px solid #d4d4d0;border-radius:12px;overflow:hidden;display:flex;flex-direction:column}
+.mz.best{border-width:1.5px}
+.mz-hd{min-height:62px;padding:8px 12px;border-bottom:.5px solid #e5e5e3;display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.mz-nm{font-size:13px;font-weight:500;line-height:1.25;margin:2px 0 0}
+.mz-co{font-size:10px;color:#888;margin:0}
+.mz-bdg{font-size:10px;font-weight:500;padding:2px 8px;border-radius:10px;white-space:nowrap;flex-shrink:0}
+.mz-bd{display:grid;grid-template-columns:minmax(0,48%) minmax(0,1fr);flex:1}
+.mz-ds{padding:6px;border-right:.5px solid #e5e5e3;display:flex;flex-direction:column;gap:2px}
+.mz-dh{font-size:9px;color:#aaa;text-transform:uppercase;letter-spacing:.06em;padding:2px 7px 3px;display:flex;justify-content:space-between}
+.mz-ded{display:flex;justify-content:space-between;gap:6px;font-size:11px;padding:4px 7px;border-radius:6px;border:.5px solid transparent;background:transparent;color:#555;cursor:pointer;font-family:inherit;width:100%}
+.mz-ded:hover{background:#f0f0ee}
+.mz-ded .pz{color:#999}
+.mz-ded.sel{background:#1A3A5C;border-color:#1A3A5C;color:#fff;font-weight:600}
+.mz-ded.sel .pz{color:#fff}
+.mz-ded.na{cursor:default;color:#bbb}
+.mz-pr{padding:10px 12px;display:flex;flex-direction:column;justify-content:center;gap:12px;container-type:inline-size;min-width:0}
+.mz-dl{font-size:10px;color:#888;margin:0}
+.mz-dd{font-size:12px;font-weight:700;color:#1A3A5C;margin:1px 0 0;text-decoration:underline;text-decoration-thickness:0.6px;text-decoration-color:#8FD3F5;text-underline-offset:3px}
+.mz-am{font-size:min(18px,11cqw);font-weight:600;line-height:1.2;margin:1px 0;white-space:nowrap;overflow:hidden}
+.mz-eq{font-size:10px;color:#999;margin:0}
+.mz-ft{padding:5px 12px 8px;border-top:.5px solid #f0f0ee;display:flex;flex-direction:column;gap:3px}
+.mz-ft .warn{margin-top:0}
 .tgl{width:36px;height:20px;border-radius:10px;background:#d4d4d0;border:none;cursor:pointer;position:relative;transition:background .2s;flex-shrink:0}
 .tgl.on{background:#0F6E56}
 .tgl::after{content:'';position:absolute;width:14px;height:14px;border-radius:50%;background:white;top:3px;left:3px;transition:left .2s}
@@ -1075,52 +1099,73 @@ function calcular(){
     <span style="display:inline-flex;align-items:center;padding:2px 10px;border-radius:20px;font-size:12px;font-weight:500;background:${niv?.bg||'#eee'};color:${niv?.color||'#333'}">${niv?.label||''}</span>
   </div>`;
 
-  html+='<div style="display:flex;flex-direction:column;gap:8px">';
-  results.forEach((item,i)=>{
-    const{k,p,c,r,matWarn}=item;const best=i===0&&r?.annual;
-    const availDeds=p.deds.filter(d=>d.value!==null);
-    const selDed=r?.dedUsed||getUsedDed(p,item.ded);
-    html+=`<div class="rc" style="border-color:${best?c.cl:'#d4d4d0'};border-width:${best?'1.5px':'.5px'}">`;
-    if(best)html+=`<div style="background:${c.bg};padding:3px 13px"><span style="font-size:10px;font-weight:500;color:${c.tc}">Mejor precio</span></div>`;
-    const isNACcard=NAC_PLANES.includes(k)||PA_MXN_DED_PLANES.includes(k);
-    const selComb=p.deds.find(d=>d.isCombined&&d.value===selDed);
-    const dedCurrLabel=selComb?`USD $${selComb.firstValue.toLocaleString()} / $${selComb.secondValue.toLocaleString()}`:(isNACcard?`MX $${selDed.toLocaleString()}`:`USD $${selDed.toLocaleString()}`);
-    html+=`<div class="rhd">
-      <div style="margin-bottom:4px">${getLogoImg(p.compania,20,100)}</div>
-      <p style="font-size:9px;color:#888;margin:0 0 1px">Ded. ${dedCurrLabel}</p>
-      <p style="font-size:13px;font-weight:500;margin:0;color:${c.cl}">${p.nombre}</p>
-      ${matWarn?`<div class="warn">${matWarn}</div>`:''}
-    </div>`;
-    // Deductible pills — multi-select: clic agrega/quita el deducible de la
-    // selección de este plan; cada deducible seleccionado genera su propia
-    // tarjeta. Meridian Plus: solo 500, 1000, 2500.
+  // ── Mosaico: una tarjeta por plan. Izquierda: escalera de deducibles con su
+  // prima (clic = seleccionar/quitar, multi-selección). Derecha: prima(s) de
+  // los deducibles seleccionados. Orden: plan con la prima seleccionada más baja.
+  const mzGroups=[],mzIdx={};
+  results.forEach(it=>{
+    if(!(it.k in mzIdx)){mzIdx[it.k]=mzGroups.length;mzGroups.push({k:it.k,p:it.p,c:it.c,items:[]});}
+    mzGroups[mzIdx[it.k]].items.push(it);
+  });
+  mzGroups.forEach(g=>{const v=g.items.map(it=>it.r&&it.r.annual).filter(Boolean);g.min=v.length?Math.min(...v):Infinity;});
+  mzGroups.sort((a,b)=>a.min-b.min);
+  const mzBest=mzGroups.length?mzGroups[0].min:Infinity;
+  const mzK=v=>v>=1000?(v%1000===0?(v/1000)+'K':(v/1000).toLocaleString('es-MX',{maximumFractionDigits:1})+'K'):String(v);
+  const mzDedTxt=(d,v,mx)=>{
+    if(d&&d.isCombined&&d.firstValue&&d.secondValue)return '$'+mzK(d.firstValue)+' / $'+mzK(d.secondValue);
+    return '$'+Math.round(v).toLocaleString('es-MX');
+  };
+  html+='<div class="mz-grid">';
+  mzGroups.forEach(g=>{
+    const{k,p,c}=g;
+    const best=isFinite(mzBest)&&g.min===mzBest;
+    const isMXNded=NAC_PLANES.includes(k)||PA_MXN_DED_PLANES.includes(k);
     const pillDeds=k==='BMI-MER-PLUS'
       ? MER_PLUS_ENDORSED_DEDS.map(v=>({value:v,label:'USD $'+v.toLocaleString()}))
-      : availDeds;
-    const selSet=new Set(planDedsSel[k]||[]);
-    if(pillDeds.length){
-      html+=`<div class="ded-row"><span style="font-size:10px;color:#aaa;margin-right:2px">Ded.:</span>`;
-      pillDeds.forEach(d=>{html+=`<button class="ded-pill${(selSet.has(d.value)||d.value===selDed)?' sel':''}" onclick="toggleDedSel('${k}',${d.value})">${d.label}</button>`;});
-      html+=`</div>`;
+      : p.deds.filter(d=>d.value!==null);
+    const items=g.items.slice().sort((a,b)=>((a.r&&a.r.dedUsed)||0)-((b.r&&b.r.dedUsed)||0));
+    const selVals=new Set(items.map(it=>(it.r&&it.r.dedUsed!=null)?it.r.dedUsed:getUsedDed(p,it.ded)));
+    const logo=(typeof getLogoImg==='function')?getLogoImg(p.compania,18,90):'';
+    html+=`<div class="mz${best?' best':''}" style="${best?'border-color:'+c.cl:''}">`;
+    html+=`<div class="mz-hd"><div style="min-width:0">${logo?`<div style="margin-bottom:3px">${logo}</div>`:`<p class="mz-co">${p.compania}</p>`}<p class="mz-nm" style="color:${c.cl}">${p.nombre}</p></div>${best?`<span class="mz-bdg" style="background:${c.bg};color:${c.tc}">Mejor precio</span>`:''}</div>`;
+    html+='<div class="mz-bd"><div class="mz-ds">';
+    html+=`<div class="mz-dh"><span>Deducible${isMXNded?' MXN':' USD'}</span><span>Prima</span></div>`;
+    pillDeds.forEach(d=>{
+      const rr=cotizarPlan(p,tA,isNaN(cA)?NaN:cA,hijosValidos,d.value,genTitular,genConyuge);
+      const ok=rr&&rr.annual;
+      const sel=selVals.has(d.value);
+      const pz=ok?(rr.isMXN?Math.round(rr.totalMXN):Math.round(rr.annual)).toLocaleString('es-MX'):'—';
+      html+=`<button class="mz-ded${sel?' sel':''}${ok?'':' na'}" ${ok?`onclick="toggleDedSel('${k}',${d.value})"`:''} title="${d.label||''}"><span>${mzDedTxt(d,d.value,isMXNded)}</span><span class="pz">${pz}</span></button>`;
+    });
+    html+='</div><div class="mz-pr">';
+    const warns=[];
+    items.forEach(it=>{
+      const r=it.r;
+      if(it.matWarn)warns.push(it.matWarn);
+      if(!r||!r.annual){html+=`<div style="font-size:12px;color:#888">${(r&&r.reason)||'N/D'}</div>`;return;}
+      const dObj=p.deds.find(d=>d.value===r.dedUsed);
+      const dTxt=mzDedTxt(dObj,r.dedUsed,isMXNded)+(isMXNded?' MXN':' USD');
+      // 1) forma de pago · 2) deducible · 3) prima en pesos (1 renglón, autoajuste) · 4) prima en dólares
+      const mxn=r.isMXN?r.totalMXN:(fx?r.annual*fx:null);
+      const main=mxn!=null?fmtM(mxn):fmtU(r.annual);
+      const usdTxt=(mxn!=null)?fmtU(r.annual):'';
+      html+=`<div><p class="mz-dl">Prima anual</p><p class="mz-dd">Ded. ${dTxt}</p><p class="mz-am" style="color:${c.cl}">${main}</p>${usdTxt?`<p class="mz-eq">${usdTxt}</p>`:''}</div>`;
+    });
+    html+='</div></div>';
+    const anyInd=items.some(it=>it.r&&it.r.isInd)&&hijosValidos.length>0;
+    if(warns.length||anyInd){
+      html+='<div class="mz-ft">';
+      warns.forEach(w=>{html+=`<div class="warn">${w}</div>`;});
+      if(anyInd)html+=`<div style="font-size:10px;color:#0F6E56">✓ Hijos cotizados por edad individual</div>`;
+      html+='</div>';
     }
-    if(!r||!r.annual){
-      html+=`<div style="padding:10px 13px;font-size:12px;color:#888">${r?.reason||'N/D'}</div>`;
-    }else if(r.isMXN){
-      html+=`<div class="rrow tot"><span>Prima anual</span><span style="color:${c.cl}">${fmtM(r.totalMXN)}</span></div>`;
-      if(fx)html+=`<div class="rrow" style="background:#fafaf9;font-size:12px"><span style="color:#888">Equiv. USD</span><span style="font-weight:500">${fmtU(r.annual)}</span></div>`;
-    }else{
-      html+=`<div class="rrow tot"><span>Prima anual</span><span style="color:${c.cl}">${fmtU(r.annual)}</span></div>`;
-      if(fx)html+=`<div class="rrow" style="background:#fafaf9;font-size:12px"><span style="color:#888">En pesos</span><span style="font-weight:500">${fmtM(r.annual*fx)}</span></div>`;
-    }
-    if(r?.isInd&&hijosValidos.length>0)html+=`<div style="padding:3px 13px 6px;font-size:10px;color:#0F6E56">✓ Hijos cotizados por edad individual</div>`;
     html+='</div>';
   });
-
-  
-
   html+='</div>';
+
   html+=`<p style="font-size:11px;color:#aaa;margin-top:8px;text-align:right">Datos en tiempo real · Google Sheets · ${new Date().toLocaleDateString('es-MX')}</p>`;
   area.innerHTML=html;
+  mzFit();
   renderComparativo();
   showPrintBtn();
 }
@@ -1128,6 +1173,15 @@ function calcular(){
 // Multi-select por plan: clic en un pill agrega/quita ese deducible de la
 // selección del plan k. Si solo queda uno seleccionado, no se puede deseleccionar
 // (siempre debe quedar al menos un deducible activo por plan).
+// Ajusta el tamaño de la prima para que siempre quepa en un solo renglón
+function mzFit(){
+  document.querySelectorAll('.mz-am').forEach(el=>{
+    el.style.fontSize='';
+    let fs=parseFloat(getComputedStyle(el).fontSize)||18;
+    while(el.scrollWidth>el.clientWidth+1&&fs>10){fs-=0.5;el.style.fontSize=fs+'px';}
+  });
+}
+window.addEventListener('resize',()=>{clearTimeout(window._mzT);window._mzT=setTimeout(mzFit,120);});
 function toggleDedSel(k,ded){
   if(!planDedsSel[k]||!planDedsSel[k].length){
     const dedRef=parseInt(document.getElementById('dref').value);
