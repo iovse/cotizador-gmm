@@ -115,6 +115,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;ba
 .rz-des{margin-top:5px;padding-top:4px;border-top:.5px dashed #e5e5e3}
 .rz-dt{font-size:7px;color:#888;text-transform:uppercase;letter-spacing:.05em;margin:0 0 2px}
 .rz-mr{display:flex;justify-content:space-between;gap:6px;font-size:8px;color:#444;line-height:1.45}
+.rz-ex{display:flex;justify-content:space-between;gap:6px;font-size:7px;color:#888;line-height:1.4;padding-left:6px}
+.rz-pol{padding-left:0;border-top:.5px solid #f0f0ee;margin-top:2px;padding-top:2px}
 .rz-mx{font-size:7px;color:#888;text-align:right;margin-top:-1px}
 .rz-tot{font-weight:700;color:#1A3A5C;border-top:.5px solid #f0f0ee;margin-top:2px;padding-top:1px}
 </style>
@@ -297,9 +299,9 @@ else{
           return '<div class="mb-row"><span class="mb-role">'+m.role+ageTxt+'</span>'+
                  '<span class="mb-val">'+fmt(m.base)+(extras.length?' <span class="mb-x">+ '+extras.join(' + ')+'</span>':'')+'</span></div>';
         }).join('');
-        const bmiAccRow=(r.bmiAccEndoso>0)?('<div class=mb-row><span class=mb-role>Endoso Exoneración de Deducible por Accidente (BMI) · total</span><span class=mb-val>'+fU(r.bmiAccEndoso)+'</span></div>'):'';const rbAccRow=(r.accEndoso>0)?('<div class=mb-row><span class=mb-role>Endoso de Accidentes (Redbridge) · total</span><span class=mb-val>'+fU(r.accEndoso)+'</span></div>'):'';
+        const bmiAccRow=(r.bmiAccEndoso>0)?('<div class=mb-row><span class=mb-role>Endoso Exoneración de Deducible por Accidente (BMI) · total</span><span class=mb-val>'+fU(r.bmiAccEndoso)+'</span></div>'):'';const rbAccRow=(r.accEndoso>0)?('<div class=mb-row><span class=mb-role>Endoso de Accidentes (Redbridge) · total</span><span class=mb-val>'+fU(r.accEndoso)+'</span></div>'):'';const suplRow=(r.supl>0)?('<div class=mb-row><span class=mb-role>Endoso de medicamentos (por póliza)</span><span class=mb-val>'+fU(r.supl)+'</span></div>'):'';
         memHTML='<tr class="mb-tr" style="background:'+(best?'#f0faf5':(i%2?'#fafaf9':'#fff'))+'">'+
-          '<td colspan="2"><div class="mb-wrap"><span class="mb-title">Desglose de prima por integrante</span>'+items+bmiAccRow+rbAccRow+'</div></td></tr>';
+          '<td colspan="2"><div class="mb-wrap"><span class="mb-title">Desglose de prima por integrante</span>'+items+suplRow+'</div></td></tr>';
       }
       rows += '<tr style="background:'+(best?'#f0faf5':(i%2?'#fafaf9':'#fff'))+'">'+
         '<td><div style="margin-bottom:3px">'+ logoImg(planKeyToCompany(r.k),13,60) +'</div>'+
@@ -407,13 +409,13 @@ else{
       const usd=r.isMXN?(D.fx?fU((r.totalMXN||0)/D.fx):''):fU(r.annual||0);
       let des='';
       (r.members||[]).forEach(m=>{
-        const ex=[];
-        if(m.acc>0)ex.push((m.accLbl||'end. acc.')+' '+fU(m.acc));
-        if(m.endoso>0)ex.push('end. Plus '+fU(m.endoso));
-        des+='<div class="rz-mr"><span>'+m.role+(typeof m.age==='number'?' · '+m.age+' años':'')+'</span><span>'+fmt(m.base)+'</span></div>'+(ex.length?'<div class="rz-mx">+ '+ex.join(' + ')+'</div>':'');
+        // Endosos: tipo a la izquierda, costo a la derecha, en letra pequeña
+        let ex='';
+        if(m.acc>0)ex+='<div class="rz-ex"><span>+ '+(m.accLbl==='end. acc. RB'?'Endoso de accidentes':(m.accLbl?'Endoso exoneración de deducible':'Endoso de accidentes'))+'</span><span>'+fU(m.acc)+'</span></div>';
+        if(m.endoso>0)ex+='<div class="rz-ex"><span>+ Endoso Meridian Plus</span><span>'+fU(m.endoso)+'</span></div>';
+        des+='<div class="rz-mr"><span>'+m.role+(typeof m.age==='number'?' · '+m.age+' años':'')+'</span><span>'+fmt(m.base)+'</span></div>'+ex;
       });
-      if(r.bmiAccEndoso>0)des+='<div class="rz-mr rz-tot"><span>End. exoneración deducible (BMI)</span><span>'+fU(r.bmiAccEndoso)+'</span></div>';
-      if(r.accEndoso>0)des+='<div class="rz-mr rz-tot"><span>End. accidentes (Redbridge)</span><span>'+fU(r.accEndoso)+'</span></div>';
+      if(r.supl>0)des+='<div class="rz-ex rz-pol"><span>+ Endoso de medicamentos (por póliza)</span><span>'+fU(r.supl)+'</span></div>';
       tiles+='<div class="rz'+(isBest?' best':'')+'" style="'+(isBest?'border-color:'+c:'')+'">'+
         '<div class="rz-hd"><div>'+logoImg(planKeyToCompany(r.k),12,56)+'<p class="rz-nm" style="color:'+c+'">'+r.nombre+'</p></div>'+
         (isBest?'<span class="rz-b">✓ Mejor precio</span>':'')+'</div>'+
