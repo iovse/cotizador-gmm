@@ -411,7 +411,7 @@ else{
       (r.members||[]).forEach(m=>{
         // Endosos: tipo a la izquierda, costo a la derecha, en letra pequeña
         let ex='';
-        if(m.acc>0)ex+='<div class="rz-ex"><span>+ '+(m.accLbl==='end. acc. RB'?'Endoso de accidentes':(m.accLbl?'Endoso exoneración de deducible':'Endoso de accidentes'))+'</span><span>'+fU(m.acc)+'</span></div>';
+        if(m.acc>0)ex+='<div class="rz-ex"><span>+ '+(m.accLbl==='end. acc. RB'?'Endoso de accidentes':(m.accLbl?'Endoso de accidentes':'Endoso de accidentes'))+'</span><span>'+fU(m.acc)+'</span></div>';
         if(m.endoso>0)ex+='<div class="rz-ex"><span>+ Endoso Meridian Plus</span><span>'+fU(m.endoso)+'</span></div>';
         des+='<div class="rz-mr"><span>'+m.role+(typeof m.age==='number'?' · '+m.age+' años':'')+'</span><span>'+fmt(m.base)+'</span></div>'+ex;
       });
