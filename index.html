@@ -58,6 +58,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .mz-eq{font-size:10px;color:#999;margin:0}
 .mz-ft{padding:5px 12px 8px;border-top:.5px solid #f0f0ee;display:flex;flex-direction:column;gap:3px}
 .mz-ft .warn{margin-top:0}
+.mz-empty{font-size:12px;color:#8a8a86;text-align:center;line-height:1.4;padding:8px 4px;border:1px dashed #d4d4d0;border-radius:8px}
 .tgl{width:36px;height:20px;border-radius:10px;background:#d4d4d0;border:none;cursor:pointer;position:relative;transition:background .2s;flex-shrink:0}
 .tgl.on{background:#0F6E56}
 .tgl::after{content:'';position:absolute;width:14px;height:14px;border-radius:50%;background:white;top:3px;left:3px;transition:left .2s}
@@ -176,10 +177,9 @@ input:focus,select:focus{outline:none;border-color:#888}
 </div>
 <!-- NIVEL Y DEDUCIBLE -->
 <div class="card" style="margin-bottom:0;flex:1">
-  <p class="sl">Nivel y deducible</p>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:0">
+  <p class="sl">Nivel de cobertura</p>
+  <div style="display:grid;grid-template-columns:1fr;gap:10px;margin-bottom:0">
     <div>
-      <p style="font-size:12px;color:#555;margin:0 0 5px">Nivel de cobertura</p>
       <select id="nivel" onchange="setNivel(this.value)">
         <option value="" selected>— Selecciona un nivel —</option>
         <option value="entrada">Entrada</option>
@@ -190,23 +190,7 @@ input:focus,select:focus{outline:none;border-color:#888}
       </select>
       <p style="font-size:11px;color:#aaa;margin-top:4px" id="nivel-hint"></p>
     </div>
-    <div>
-      <p style="font-size:12px;color:#555;margin:0 0 5px">Deducible preferido</p>
-      <select id="dref" onchange="onDrefChange()">
-        <option value="" selected>— Elige una opción —</option>
-        <option value="500">USD $500</option>
-        <option value="1000">USD $1,000</option>
-        <option value="2000">USD $2,000</option>
-        <option value="2500">USD $2,500</option>
-        <option value="3000">USD $3,000</option>
-        <option value="3500">USD $3,500</option>
-        <option value="5000">USD $5,000</option>
-        <option value="10000">USD $10,000</option>
-        <option value="20000">USD $20,000</option>
-        <option value="50000">USD $50,000</option>
-      </select>
-      <p style="font-size:11px;color:#aaa;margin-top:4px">Se usa el más cercano disponible si el exacto no existe</p>
-    </div>
+    <input type="hidden" id="dref" value="">
   </div>
 
 </div>
@@ -450,7 +434,7 @@ function buildCombos(activeKeys){
   activeKeys.forEach(k=>{
     const p=plans[k];if(!p)return;
     const c=CLR[k]||{cl:'#666',bg:'#f5f5f5',tc:'#333'};
-    if(!planDedsSel[k]||!planDedsSel[k].length)planDedsSel[k]=[getUsedDed(p,dedRef)];
+    if(!planDedsSel[k])planDedsSel[k]=[];
     const seen=new Set();
     planDedsSel[k].forEach(dv=>{
       const r=cotizarPlan(p,tA,isNaN(cA)?NaN:cA,hijosValidos,dv,genTitular,genConyuge);
@@ -1069,10 +1053,6 @@ function calcular(){
     area.innerHTML='<p style="font-size:13px;color:#888;text-align:center;padding:1rem 0">Ingresa la edad del titular para ver la cotización.</p>';
     renderComparativo();return;
   }
-  if(isNaN(dedRef)){
-    area.innerHTML='<p style="font-size:13px;color:#888;text-align:center;padding:1rem 0">Elige un deducible preferido para ver la cotización.</p>';
-    renderComparativo();return;
-  }
 
   // Un plan puede tener varios deducibles seleccionados (pills en su tarjeta,
   // multi-select vía toggleDedSel) — cada combinación (plan, deducible) genera
@@ -1081,8 +1061,10 @@ function calcular(){
   Object.keys(plans).forEach(k=>{
     if(!active[k])return;
     const p=plans[k];const c=CLR[k]||{cl:'#666',bg:'#f5f5f5',tc:'#333'};
-    if(!planDedsSel[k]||!planDedsSel[k].length)planDedsSel[k]=[getUsedDed(p,dedRef)];
+    if(!planDedsSel[k])planDedsSel[k]=[];
     const seen=new Set();
+    // Plan activo sin deducibles marcados: igual se muestra su cuadro con todas las opciones
+    if(!planDedsSel[k].length){results.push({k,ded:null,p,c,r:null,matWarn:null,empty:true});return;}
     planDedsSel[k].forEach(dv=>{
       const r=cotizarPlan(p,tA,isNaN(cA)?NaN:cA,hijosValidos,dv,genTitular,genConyuge);
       const usedDed=r?.dedUsed||getUsedDed(p,dv);
@@ -1120,9 +1102,15 @@ function calcular(){
     if(!(it.k in mzIdx)){mzIdx[it.k]=mzGroups.length;mzGroups.push({k:it.k,p:it.p,c:it.c,items:[]});}
     mzGroups[mzIdx[it.k]].items.push(it);
   });
-  mzGroups.forEach(g=>{const v=g.items.map(it=>it.r&&it.r.annual).filter(Boolean);g.min=v.length?Math.min(...v):Infinity;});
-  mzGroups.sort((a,b)=>a.min-b.min);
-  const mzBest=mzGroups.length?mzGroups[0].min:Infinity;
+  // Mejor precio = la prima seleccionada más baja; orden = prima del deducible más bajo de cada plan
+  mzGroups.forEach(g=>{
+    const v=g.items.map(it=>it.r&&it.r.annual).filter(Boolean);g.min=v.length?Math.min(...v):Infinity;
+    const pd=g.k==='BMI-MER-PLUS'?MER_PLUS_ENDORSED_DEDS.map(v=>({value:v})):g.p.deds.filter(d=>d.value!==null&&!d.isCombined);
+    g.sortKey=Infinity;
+    for(const d of pd.slice().sort((a,b)=>a.value-b.value)){const rr=cotizarPlan(g.p,tA,isNaN(cA)?NaN:cA,hijosValidos,d.value,genTitular,genConyuge);if(rr&&rr.annual){g.sortKey=rr.annual;break;}}
+  });
+  mzGroups.sort((a,b)=>a.sortKey-b.sortKey);
+  const mzBest=Math.min(...mzGroups.map(g=>g.min));
   const mzK=v=>v>=1000?(v%1000===0?(v/1000)+'K':(v/1000).toLocaleString('es-MX',{maximumFractionDigits:1})+'K'):String(v);
   const mzDedTxt=(d,v,mx)=>{
     if(d&&d.isCombined&&d.firstValue&&d.secondValue)return '$'+mzK(d.firstValue)+' / $'+mzK(d.secondValue);
@@ -1136,7 +1124,7 @@ function calcular(){
     const pillDeds=k==='BMI-MER-PLUS'
       ? MER_PLUS_ENDORSED_DEDS.map(v=>({value:v,label:'USD $'+v.toLocaleString()}))
       : p.deds.filter(d=>d.value!==null);
-    const items=g.items.slice().sort((a,b)=>((a.r&&a.r.dedUsed)||0)-((b.r&&b.r.dedUsed)||0));
+    const items=g.items.filter(it=>!it.empty).sort((a,b)=>((a.r&&a.r.dedUsed)||0)-((b.r&&b.r.dedUsed)||0));
     const selVals=new Set(items.map(it=>(it.r&&it.r.dedUsed!=null)?it.r.dedUsed:getUsedDed(p,it.ded)));
     const logo=(typeof getLogoImg==='function')?getLogoImg(p.compania,18,90):'';
     html+=`<div class="mz${best?' best':''}" style="${best?'border-color:'+c.cl:''}">`;
@@ -1151,6 +1139,7 @@ function calcular(){
       html+=`<button class="mz-ded${sel?' sel':''}${ok?'':' na'}" ${ok?`onclick="toggleDedSel('${k}',${d.value})"`:''} title="${d.label||''}"><span>${mzDedTxt(d,d.value,isMXNded)}</span><span class="pz">${pz}</span></button>`;
     });
     html+='</div><div class="mz-pr">';
+    if(!items.length)html+='<div class="mz-empty">Selecciona deducibles a cotizar</div>';
     const warns=[];
     items.forEach(it=>{
       const r=it.r;
@@ -1196,12 +1185,9 @@ function mzFit(){
 }
 window.addEventListener('resize',()=>{clearTimeout(window._mzT);window._mzT=setTimeout(mzFit,120);});
 function toggleDedSel(k,ded){
-  if(!planDedsSel[k]||!planDedsSel[k].length){
-    const dedRef=parseInt(document.getElementById('dref').value);
-    planDedsSel[k]=[getUsedDed(plans[k],isNaN(dedRef)?ded:dedRef)];
-  }
+  if(!planDedsSel[k])planDedsSel[k]=[];
   const idx=planDedsSel[k].indexOf(ded);
-  if(idx>=0){if(planDedsSel[k].length>1)planDedsSel[k].splice(idx,1);}
+  if(idx>=0)planDedsSel[k].splice(idx,1);
   else planDedsSel[k].push(ded);
   planDedsSel[k].sort((a,b)=>a-b);
   calcular();
@@ -1312,7 +1298,7 @@ function openPrint(mode){
   const usedDedsAll=[]; // deducibles numéricos reales usados, para el resumen de clientBar()
   activeKeys.forEach(k=>{
     const p=plans[k];if(!p)return;
-    if(!planDedsSel[k]||!planDedsSel[k].length)planDedsSel[k]=[getUsedDed(p,dedRef)];
+    if(!planDedsSel[k])planDedsSel[k]=[];
     const seen=new Set();
     planDedsSel[k].forEach(dv=>{
       const r=cotizarPlan(p,tA,isNaN(cA)?NaN:cA,hijosValidos,dv,genTitular,genConyuge);
@@ -1333,7 +1319,7 @@ function openPrint(mode){
         emision:r.emision||0,best:false,matWarn});
     });
   });
-  if(!printResults.length){alert('Ingresa la edad del titular primero.');return;}
+  if(!printResults.length){alert('Selecciona al menos un deducible a cotizar.');return;}
   printResults.sort((a,b)=>a.totalMXN-b.totalMXN);
   printResults[0].best=true;
   usedDedsAll.sort((a,b)=>a-b);
@@ -1376,7 +1362,7 @@ function resetForm(){
   // Reset nivel to alto
   document.getElementById('nivel').value='';
   setNivel('');
-  // Reset deducible — vuelve al placeholder sin selección
+  // Reset selección de deducibles
   document.getElementById('dref').value='';
   planDedsSel={};
   // Reset descuentos
