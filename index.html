@@ -589,8 +589,11 @@ function parseSheet(rows){
     deds.push({label,value:parsed.value,isCombined:parsed.isCombined,firstValue:parsed.firstValue||null,secondValue:parsed.secondValue||null,col:c});
   }
   if(!deds.length)return null;
-  const ageData={},children={};
+  const ageData={},children={},depData={};
   let lastAgeNum=null;
+  // Tabla de dependientes: si la edad vuelve a empezar (p.ej. Redbridge: titulares 18–74
+  // y después hijos 0–23), esos renglones van a depData y NO sobrescriben la tarifa de titular.
+  let lastPlainAge=null,depMode=false;
   for(let r=10;r<rows.length;r++){
     const row=rows[r];
     if(!row)continue;
@@ -622,16 +625,19 @@ function parseSheet(rows){
         key=ageNum+'_'+g;
       } else {
         key=ageNum;
+        if(lastPlainAge!==null&&ageNum<lastPlainAge)depMode=true;
+        lastPlainAge=ageNum;
       }
-      ageData[key]={};
-      deds.forEach(d=>{const v=row[d.col];if(v!=null&&v!==''&&!isNaN(Number(v)))ageData[key][d.value]=Math.round(Number(v));});
+      const tgt=(depMode&&!hasGender)?depData:ageData;
+      tgt[key]={};
+      deds.forEach(d=>{const v=row[d.col];if(v!=null&&v!==''&&!isNaN(Number(v)))tgt[key][d.value]=Math.round(Number(v));});
     }
   }
   const admin=meta['ADMIN (USD)']?Math.round(Number(meta['ADMIN (USD)'])):0;
   const supl=meta['SUPL (USD)']?Math.round(Number(meta['SUPL (USD)'])):0;
   return{clave:String(meta['CLAVE']).trim(),compania:meta['COMPAÑIA']||'',nombre:meta['NOMBRE COMPLETO']||'',
     moneda:String(meta['MONEDA']||'USD').trim(),nivel:meta['NIVEL']||'',
-    admin:isNaN(admin)?0:admin,supl:isNaN(supl)?0:supl,deds,ageData,children,
+    admin:isNaN(admin)?0:admin,supl:isNaN(supl)?0:supl,deds,ageData,children,depData,
     isMXN:String(meta['MONEDA']||'').trim().toUpperCase()==='MXN'};
 }
 
@@ -825,7 +831,7 @@ function cotizarPlan(plan,tA,cA,hijosArr,dedRef,gT,gC){
         if(v){base+=v;members.push({role:'Hijo adulto '+(hi+1),age:h.age,gen:h.gen||'M',base:v,acc:0});}
       });
     } else if(isInd){
-      hijosArr.forEach((h,hi)=>{if(isNaN(h.age)||h.age<0)return;const v=getAgeVal(plan,Math.min(h.age,23),usedDed);if(v){base+=v;members.push({role:'Hijo '+(hi+1),age:h.age,gen:h.gen||'M',base:v,acc:0});}});
+      hijosArr.forEach((h,hi)=>{if(isNaN(h.age)||h.age<0)return;const v=getAgeVal((plan.depData&&Object.keys(plan.depData).length)?{ageData:plan.depData}:plan,Math.min(h.age,23),usedDed);if(v){base+=v;members.push({role:'Hijo '+(hi+1),age:h.age,gen:h.gen||'M',base:v,acc:0});}});
     } else {
       const g=Math.min(hijosArr.length,3);const cv=plan.children[g]?.[usedDed];if(cv){base+=cv;members.push({role:hijosArr.length>1?('Hijos ('+hijosArr.length+')'):'Hijo',grouped:true,count:hijosArr.length,base:cv,acc:0});}
     }
